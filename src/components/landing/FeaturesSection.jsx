@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../common/Badge';
 import { formatINR } from '../../utils/currency';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 const FEATURES = [
   {
@@ -69,16 +70,23 @@ const FEATURES = [
 
 export const FeaturesSection = () => {
   const [activeFeature, setActiveFeature] = useState(0);
+  const [headerRef, headerRevealed] = useScrollReveal();
+  const [bodyRef, bodyRevealed] = useScrollReveal();
 
   const feature = FEATURES[activeFeature];
   const Icon = feature.icon;
 
   return (
-    <section id="features" className="py-24 bg-white border-b border-border">
+    <section id="features" className="py-24 bg-white border-b border-border overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Section Heading */}
-        <div className="max-w-3xl mx-auto text-center space-y-4 mb-16">
+        {/* Section Heading with Scroll Reveal */}
+        <div
+          ref={headerRef}
+          className={`max-w-3xl mx-auto text-center space-y-4 mb-16 reveal-on-scroll ${
+            headerRevealed ? 'is-revealed' : ''
+          }`}
+        >
           <Badge variant="forest" size="sm">Core System Capabilities</Badge>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-forest-deep leading-tight">
             Everything your tiffin business needs. One platform.
@@ -89,8 +97,12 @@ export const FeaturesSection = () => {
         </div>
 
         {/* Interactive Feature Showcase with Tab Selector & Rich Visual Previews */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          
+        <div
+          ref={bodyRef}
+          className={`grid grid-cols-1 lg:grid-cols-12 gap-8 items-center reveal-on-scroll delay-100 ${
+            bodyRevealed ? 'is-revealed' : ''
+          }`}
+        >
           {/* Feature List (Left 5 Cols) */}
           <div className="lg:col-span-5 space-y-2">
             {FEATURES.map((item, index) => {
@@ -122,7 +134,7 @@ export const FeaturesSection = () => {
                     </p>
                   </div>
                   <ChevronRight className={`w-4 h-4 flex-shrink-0 mt-1 transition-transform ${
-                    isSelected ? 'text-forest translate-x-0.5' : 'text-muted-light'
+                    isSelected ? 'text-forest translate-x-1' : 'text-muted-light'
                   }`} />
                 </button>
               );
@@ -131,7 +143,7 @@ export const FeaturesSection = () => {
 
           {/* Interactive Feature Visual Preview (Right 7 Cols) */}
           <div className="lg:col-span-7">
-            <div className="bg-surface rounded-card border border-border p-6 sm:p-8 shadow-card relative overflow-hidden min-h-[460px] flex flex-col justify-between">
+            <div className="bg-surface rounded-card border border-border p-6 sm:p-8 shadow-card relative overflow-hidden min-h-[460px] flex flex-col justify-between transition-all duration-300">
               
               {/* Feature Header */}
               <div className="space-y-3 pb-6 border-b border-border/80">
@@ -150,7 +162,7 @@ export const FeaturesSection = () => {
               </div>
 
               {/* Dynamic UI Preview depending on selected feature */}
-              <div className="py-6 flex-1 flex flex-col justify-center">
+              <div key={feature.id} className="py-6 flex-1 flex flex-col justify-center animate-in fade-in duration-300">
                 
                 {/* 1. Customers Preview */}
                 {feature.id === 'customers' && (
@@ -196,7 +208,7 @@ export const FeaturesSection = () => {
                           <p className="font-bold text-charcoal">Preeti Kashyap</p>
                           <p className="text-[11px] text-muted-text">Occasional Order · Extra Dal</p>
                         </div>
-                        <button className="px-3 py-1 bg-forest text-white rounded text-xs font-semibold hover:bg-forest-hover">
+                        <button className="px-3 py-1 bg-forest text-white rounded text-xs font-semibold hover:bg-forest-hover transition-colors">
                           Dispatch (₹120)
                         </button>
                       </div>

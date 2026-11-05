@@ -1,6 +1,7 @@
 import React from 'react';
-import { UserPlus, Truck, FileCheck, ArrowRight } from 'lucide-react';
+import { UserPlus, Truck, FileCheck } from 'lucide-react';
 import { Badge } from '../common/Badge';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 const STEPS = [
   {
@@ -30,12 +31,20 @@ const STEPS = [
 ];
 
 export const HowItWorksSection = () => {
+  const [headerRef, headerRevealed] = useScrollReveal();
+  const [cardsRef, cardsRevealed] = useScrollReveal();
+
   return (
-    <section id="how-it-works" className="py-24 bg-surface border-b border-border">
+    <section id="how-it-works" className="py-24 bg-surface border-b border-border overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Section Heading */}
-        <div className="max-w-3xl mx-auto text-center space-y-4 mb-20">
+        {/* Section Heading with Scroll Reveal */}
+        <div
+          ref={headerRef}
+          className={`max-w-3xl mx-auto text-center space-y-4 mb-20 reveal-on-scroll ${
+            headerRevealed ? 'is-revealed' : ''
+          }`}
+        >
           <Badge variant="mint" size="sm">Simple 3-Step Operations</Badge>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-forest-deep leading-tight">
             How TiffinOS Works in Your Daily Routine
@@ -45,22 +54,28 @@ export const HowItWorksSection = () => {
           </p>
         </div>
 
-        {/* Step Sequence Timeline */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-          
+        {/* Step Sequence Timeline with Staggered Scroll Reveal */}
+        <div
+          ref={cardsRef}
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 relative"
+        >
           {STEPS.map((item, index) => {
             const Icon = item.icon;
+            const delayClass = ['delay-100', 'delay-200', 'delay-300'][index];
+
             return (
               <div
                 key={item.step}
-                className="bg-white rounded-card p-6 sm:p-8 border border-border shadow-subtle flex flex-col justify-between relative group hover:border-forest/30 transition-all duration-200"
+                className={`bg-white rounded-card p-6 sm:p-8 border border-border shadow-subtle flex flex-col justify-between relative group hover:border-forest/40 hover:shadow-card hover:-translate-y-1 transition-all duration-200 reveal-on-scroll ${delayClass} ${
+                  cardsRevealed ? 'is-revealed' : ''
+                }`}
               >
                 {/* Step indicator watermark */}
                 <div className="flex items-center justify-between pb-6 border-b border-border/80">
-                  <div className="w-12 h-12 rounded-xl bg-forest/10 border border-forest/20 flex items-center justify-center text-forest group-hover:bg-forest group-hover:text-white transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-forest/10 border border-forest/20 flex items-center justify-center text-forest group-hover:bg-forest group-hover:text-white transition-colors duration-200">
                     <Icon className="w-6 h-6" />
                   </div>
-                  <span className="font-mono text-3xl font-bold text-border group-hover:text-forest/30 transition-colors">
+                  <span className="font-mono text-3xl font-bold text-border group-hover:text-forest/30 transition-colors duration-200">
                     {item.step}
                   </span>
                 </div>
@@ -85,7 +100,6 @@ export const HowItWorksSection = () => {
               </div>
             );
           })}
-
         </div>
 
       </div>

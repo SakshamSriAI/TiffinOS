@@ -1,13 +1,22 @@
 import React from 'react';
-import { Heart, ShieldCheck, Sparkles, ChefHat, Clock } from 'lucide-react';
+import { ChefHat, Clock, ShieldCheck } from 'lucide-react';
 import { Badge } from '../common/Badge';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 export const AboutSection = () => {
+  const [headerRef, headerRevealed] = useScrollReveal();
+  const [cardsRef, cardsRevealed] = useScrollReveal();
+
   return (
-    <section id="about" className="py-20 bg-surface-subtle border-b border-border">
+    <section id="about" className="py-20 bg-surface-subtle border-b border-border overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div className="max-w-3xl mx-auto text-center space-y-4 mb-16">
+        <div
+          ref={headerRef}
+          className={`max-w-3xl mx-auto text-center space-y-4 mb-16 reveal-on-scroll ${
+            headerRevealed ? 'is-revealed' : ''
+          }`}
+        >
           <Badge variant="forest" size="sm">Our Story & Purpose</Badge>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-forest-deep leading-tight">
             Built from Real Kitchen Mornings.
@@ -17,8 +26,15 @@ export const AboutSection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-white rounded-card p-6 sm:p-8 border border-border shadow-subtle space-y-3">
+        <div
+          ref={cardsRef}
+          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+        >
+          <div
+            className={`bg-white rounded-card p-6 sm:p-8 border border-border shadow-subtle space-y-3 hover:border-forest/30 hover:shadow-card hover:-translate-y-0.5 transition-all duration-200 reveal-on-scroll delay-100 ${
+              cardsRevealed ? 'is-revealed' : ''
+            }`}
+          >
             <div className="w-10 h-10 rounded-lg bg-forest/10 flex items-center justify-center text-forest">
               <ChefHat className="w-5 h-5" />
             </div>
@@ -28,7 +44,11 @@ export const AboutSection = () => {
             </p>
           </div>
 
-          <div className="bg-white rounded-card p-6 sm:p-8 border border-border shadow-subtle space-y-3">
+          <div
+            className={`bg-white rounded-card p-6 sm:p-8 border border-border shadow-subtle space-y-3 hover:border-forest/30 hover:shadow-card hover:-translate-y-0.5 transition-all duration-200 reveal-on-scroll delay-200 ${
+              cardsRevealed ? 'is-revealed' : ''
+            }`}
+          >
             <div className="w-10 h-10 rounded-lg bg-mint/40 flex items-center justify-center text-forest-deep">
               <Clock className="w-5 h-5" />
             </div>
@@ -38,7 +58,11 @@ export const AboutSection = () => {
             </p>
           </div>
 
-          <div className="bg-white rounded-card p-6 sm:p-8 border border-border shadow-subtle space-y-3">
+          <div
+            className={`bg-white rounded-card p-6 sm:p-8 border border-border shadow-subtle space-y-3 hover:border-forest/30 hover:shadow-card hover:-translate-y-0.5 transition-all duration-200 reveal-on-scroll delay-300 ${
+              cardsRevealed ? 'is-revealed' : ''
+            }`}
+          >
             <div className="w-10 h-10 rounded-lg bg-amber-accent/15 flex items-center justify-center text-amber-dark">
               <ShieldCheck className="w-5 h-5" />
             </div>

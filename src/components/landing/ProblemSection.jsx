@@ -5,11 +5,11 @@ import {
   FileX, 
   HelpCircle, 
   WalletCards, 
-  CheckCircle,
-  XCircle,
-  ArrowRight
+  CheckCircle, 
+  XCircle 
 } from 'lucide-react';
 import { Badge } from '../common/Badge';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 const PROBLEMS = [
   {
@@ -45,12 +45,20 @@ const PROBLEMS = [
 ];
 
 export const ProblemSection = () => {
+  const [headerRef, headerRevealed] = useScrollReveal();
+  const [contentRef, contentRevealed] = useScrollReveal();
+
   return (
-    <section className="py-20 bg-surface-subtle border-y border-border/80">
+    <section className="py-20 bg-surface-subtle border-y border-border/80 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Section Heading */}
-        <div className="max-w-3xl mx-auto text-center space-y-4 mb-16">
+        {/* Section Heading with Scroll Reveal */}
+        <div
+          ref={headerRef}
+          className={`max-w-3xl mx-auto text-center space-y-4 mb-16 reveal-on-scroll ${
+            headerRevealed ? 'is-revealed' : ''
+          }`}
+        >
           <Badge variant="pending" size="sm">The Daily Reality</Badge>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-forest-deep leading-tight">
             Running a tiffin business shouldn't mean managing endless paperwork.
@@ -60,17 +68,29 @@ export const ProblemSection = () => {
           </p>
         </div>
 
-        {/* Asymmetrical Layout: Editorial Breakdown on Left, Contrast Card on Right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          
+        {/* Asymmetrical Layout with Staggered Scroll Reveal */}
+        <div
+          ref={contentRef}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch"
+        >
           {/* Left Column: 5 Specific Pain Points in a Structured List */}
-          <div className="lg:col-span-7 space-y-4">
+          <div className="lg:col-span-7 space-y-3.5">
             {PROBLEMS.map((item, idx) => {
               const Icon = item.icon;
+              const delayClass = [
+                'delay-100',
+                'delay-200',
+                'delay-300',
+                'delay-400',
+                'delay-500'
+              ][idx] || 'delay-100';
+
               return (
                 <div
                   key={item.title}
-                  className="bg-white rounded-card p-5 border border-border shadow-subtle hover:border-forest/20 transition-colors flex items-start gap-4"
+                  className={`bg-white rounded-card p-5 border border-border shadow-subtle hover:border-forest/30 hover:shadow-card transition-all duration-200 flex items-start gap-4 reveal-on-scroll ${delayClass} ${
+                    contentRevealed ? 'is-revealed' : ''
+                  }`}
                 >
                   <div className="w-10 h-10 rounded-lg bg-rose-50 border border-rose-200 flex-shrink-0 flex items-center justify-center text-status-error">
                     <Icon className="w-5 h-5" />
@@ -91,8 +111,12 @@ export const ProblemSection = () => {
             })}
           </div>
 
-          {/* Right Column: High-Impact Before & After Card */}
-          <div className="lg:col-span-5 flex flex-col justify-between bg-white rounded-card border border-border p-6 sm:p-8 shadow-card">
+          {/* Right Column: High-Impact Before & After Card with Scroll Reveal */}
+          <div
+            className={`lg:col-span-5 flex flex-col justify-between bg-white rounded-card border border-border p-6 sm:p-8 shadow-card reveal-on-scroll delay-200 ${
+              contentRevealed ? 'is-revealed' : ''
+            }`}
+          >
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-border">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-text">

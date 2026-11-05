@@ -4,10 +4,10 @@ import {
   Receipt, 
   CalendarCheck, 
   TrendingUp, 
-  HeartHandshake,
-  CheckCircle2
+  HeartHandshake, 
+  CheckCircle2 
 } from 'lucide-react';
-import { Badge } from '../common/Badge';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 const BENEFITS = [
   {
@@ -38,12 +38,20 @@ const BENEFITS = [
 ];
 
 export const BenefitsSection = () => {
+  const [headerRef, headerRevealed] = useScrollReveal();
+  const [gridRef, gridRevealed] = useScrollReveal();
+
   return (
     <section id="benefits" className="py-24 bg-forest-deep text-white border-b border-forest-light relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
-        {/* Section Header */}
-        <div className="max-w-3xl mx-auto text-center space-y-4 mb-20">
+        {/* Section Header with Scroll Reveal */}
+        <div
+          ref={headerRef}
+          className={`max-w-3xl mx-auto text-center space-y-4 mb-20 reveal-on-scroll ${
+            headerRevealed ? 'is-revealed' : ''
+          }`}
+        >
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-forest text-mint text-xs font-bold uppercase tracking-wider border border-mint/20">
             Real Business Impact
           </span>
@@ -55,14 +63,27 @@ export const BenefitsSection = () => {
           </p>
         </div>
 
-        {/* Benefits Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Benefits Grid with Staggered Scroll Reveal */}
+        <div
+          ref={gridRef}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
           {BENEFITS.map((item, idx) => {
             const Icon = item.icon;
+            const delayClass = [
+              'delay-100',
+              'delay-200',
+              'delay-300',
+              'delay-400',
+              'delay-500'
+            ][idx] || 'delay-100';
+
             return (
               <div
                 key={item.title}
-                className="bg-white/5 rounded-card p-6 sm:p-8 border border-white/10 hover:border-mint/30 hover:bg-white/[0.07] transition-all duration-200 space-y-4"
+                className={`bg-white/5 rounded-card p-6 sm:p-8 border border-white/10 hover:border-mint/40 hover:bg-white/[0.08] hover:-translate-y-0.5 transition-all duration-200 space-y-4 reveal-on-scroll ${delayClass} ${
+                  gridRevealed ? 'is-revealed' : ''
+                }`}
               >
                 <div className="w-10 h-10 rounded-lg bg-mint/10 border border-mint/20 flex items-center justify-center text-mint">
                   <Icon className="w-5 h-5" />
@@ -76,7 +97,11 @@ export const BenefitsSection = () => {
           })}
 
           {/* Impact Summary Card */}
-          <div className="bg-forest rounded-card p-6 sm:p-8 border border-mint/30 flex flex-col justify-between space-y-4">
+          <div
+            className={`bg-forest rounded-card p-6 sm:p-8 border border-mint/30 flex flex-col justify-between space-y-4 hover:border-mint/50 transition-all duration-200 reveal-on-scroll delay-500 ${
+              gridRevealed ? 'is-revealed' : ''
+            }`}
+          >
             <div className="space-y-2">
               <span className="text-xs uppercase font-bold tracking-wider text-mint">Family First</span>
               <h3 className="text-lg font-bold text-white">Focus on Food, Not Registers</h3>
