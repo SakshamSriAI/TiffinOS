@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import { Button } from '../common/Button';
 
 export const LandingNavbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,7 +29,8 @@ export const LandingNavbar = () => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
-          {/* Logo & Wordmark */}
+          
+          {/* LEFT: Logo & Wordmark */}
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 rounded-lg bg-forest flex items-center justify-center text-white border border-mint/20 shadow-sm transition-transform group-hover:scale-105">
               <svg className="w-5 h-5 text-mint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -49,8 +49,8 @@ export const LandingNavbar = () => {
             </div>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8">
+          {/* MIDDLE: Desktop Navigation Links */}
+          <nav className="hidden md:flex items-center gap-7 lg:gap-8">
             <a href="#features" className="text-sm font-medium text-charcoal/80 hover:text-forest transition-colors">
               Features
             </a>
@@ -65,16 +65,16 @@ export const LandingNavbar = () => {
             </a>
           </nav>
 
-          {/* Desktop Right CTAs */}
+          {/* RIGHT: Login & Get Started CTAs */}
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/app/dashboard">
+            <Link to="/login">
               <Button variant="ghost" size="sm">
-                Dashboard Demo
+                Login
               </Button>
             </Link>
-            <Link to="/app/dispatch">
+            <Link to="/app/dashboard">
               <Button variant="primary" size="sm" iconRight={ArrowRight}>
-                Try Live Dispatch
+                Get Started
               </Button>
             </Link>
           </div>
@@ -89,13 +89,14 @@ export const LandingNavbar = () => {
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
+
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Responsive Navigation Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-b border-border px-4 pt-3 pb-6 space-y-4 shadow-lg animate-in slide-in-from-top-2 duration-150">
-          <nav className="flex flex-col space-y-2">
+          <nav className="flex flex-col space-y-1">
             <a
               href="#features"
               onClick={() => setMobileMenuOpen(false)}
@@ -127,14 +128,14 @@ export const LandingNavbar = () => {
           </nav>
 
           <div className="pt-3 border-t border-border flex flex-col gap-2">
-            <Link to="/app/dashboard" onClick={() => setMobileMenuOpen(false)}>
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="secondary" size="md" className="w-full">
-                Dashboard Demo
+                Login
               </Button>
             </Link>
-            <Link to="/app/dispatch" onClick={() => setMobileMenuOpen(false)}>
+            <Link to="/app/dashboard" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="primary" size="md" className="w-full" iconRight={ArrowRight}>
-                Try Live Dispatch
+                Get Started
               </Button>
             </Link>
           </div>
