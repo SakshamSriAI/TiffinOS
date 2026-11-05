@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AppProvider } from './context/AppContext';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import DesignSystemPreview from './pages/DesignSystemPreview';
@@ -14,33 +15,35 @@ import Settings from './pages/Settings';
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public Marketing Route */}
-        <Route path="/" element={<LandingPage />} />
-        
-        {/* Design System & Token Showcase */}
-        <Route path="/design-system" element={<DesignSystemPreview />} />
+    <AppProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Marketing Route */}
+          <Route path="/" element={<LandingPage />} />
+          
+          {/* Design System & Token Showcase */}
+          <Route path="/design-system" element={<DesignSystemPreview />} />
 
-        {/* Authentication */}
-        <Route path="/login" element={<Login />} />
+          {/* Authentication */}
+          <Route path="/login" element={<Login />} />
 
-        {/* Private Application Shell */}
-        <Route path="/app" element={<AppLayout />}>
-          <Route index element={<Navigate to="/app/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="dispatch" element={<Dispatch />} />
-          <Route path="billing" element={<Billing />} />
-          <Route path="expenses" element={<Expenses />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
+          {/* Private Application Shell */}
+          <Route path="/app" element={<AppLayout />}>
+            <Route index element={<Navigate to="/app/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="dispatch" element={<Dispatch />} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="expenses" element={<Expenses />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AppProvider>
   );
 }
 
