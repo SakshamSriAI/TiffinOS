@@ -19,7 +19,7 @@ export const AppProvider = ({ children }) => {
   const [activeModal, setActiveModal] = useState(null); // 'addCustomer' | 'addOrder' | 'generateBills' | 'addExpense' | null
   const [selectedDate, setSelectedDate] = useState('2026-11-06');
 
-  // Customer Actions
+  // Customer Management Actions
   const addCustomer = (customerData) => {
     const newCust = {
       ...customerData,
@@ -46,7 +46,45 @@ export const AppProvider = ({ children }) => {
 
   const updateCustomer = (id, updatedFields) => {
     setCustomers((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updatedFields } : c))
+      prev.map((c) => {
+        if (c.id === id) {
+          // Rule: If price changes, historical dispatches are untouched!
+          return { ...c, ...updatedFields };
+        }
+        return c;
+      })
+    );
+
+    const cust = customers.find((c) => c.id === id);
+    if (cust) {
+      const newActivity = {
+        id: `act-${Date.now()}`,
+        type: 'customer',
+        title: 'Customer Profile Updated',
+        description: `Updated preferences for ${cust.name}.`,
+        timestamp: 'Just now',
+        badge: 'Updated',
+        badgeVariant: 'neutral',
+      };
+      setActivities((prev) => [newActivity, ...prev]);
+    }
+  };
+
+  const pauseCustomer = (id, reason = 'Paused by owner') => {
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status: 'paused', instructions: `${c.instructions || ''} [Paused: ${reason}]`.trim() } : c))
+    );
+  };
+
+  const reactivateCustomer = (id) => {
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status: 'active' } : c))
+    );
+  };
+
+  const archiveCustomer = (id) => {
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status: 'archived' } : c))
     );
   };
 
@@ -60,6 +98,32 @@ export const AppProvider = ({ children }) => {
         return c;
       })
     );
+  };
+
+  // Helper to get all details, invoices, and meal history for a specific customer
+  const getCustomerProfileData = (customerId) => {
+    const customer = customers.find((c) => c.id === customerId);
+    if (!customer) return null;
+
+    const customerMeals = mealOrders.filter((m) => m.customerId === customerId);
+    const dispatchedMeals = customerMeals.filter((m) => m.status === 'dispatched');
+    const customerInvoices = invoices.filter((i) => i.customerId === customerId);
+
+    const totalDispatchedCount = dispatchedMeals.length + (customer.id === 'cust-1' ? 44 : 20); // historical seed offset
+    const totalRecognizedBill = customerInvoices.reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0);
+    const totalPaidAmount = customerInvoices.reduce((sum, inv) => sum + Number(inv.paidAmount || 0), 0);
+    const totalOutstanding = customerInvoices.reduce((sum, inv) => sum + Number(inv.balanceDue || 0), 0);
+
+    return {
+      customer,
+      customerMeals,
+      dispatchedMeals,
+      customerInvoices,
+      totalDispatchedCount,
+      totalRecognizedBill,
+      totalPaidAmount,
+      totalOutstanding,
+    };
   };
 
   // Dispatch Actions
@@ -191,7 +255,10 @@ export const AppProvider = ({ children }) => {
 
   // Derived Financials & Metrics
   const metrics = useMemo(() => {
+    const totalCustCount = customers.length;
     const activeCustCount = customers.filter((c) => c.status === 'active').length;
+    const pausedCustCount = customers.filter((c) => c.status === 'paused').length;
+    const archivedCustCount = customers.filter((c) => c.status === 'archived').length;
     const regularCustCount = customers.filter((c) => c.type === 'regular' && c.status === 'active').length;
     const occasionalCustCount = customers.filter((c) => c.type === 'occasional' && c.status === 'active').length;
 
@@ -209,10 +276,9 @@ export const AppProvider = ({ children }) => {
     const dinnerDispatched = dinnerOrders.filter((o) => o.status === 'dispatched').length;
 
     // Month-to-date financials
-    // Meal revenue = recognized value of meals with dispatched status
     const mealRevenue = mealOrders
       .filter((o) => o.status === 'dispatched')
-      .reduce((sum, o) => sum + Number(o.price || 0), 0) + 33800; // adding prior days in Nov
+      .reduce((sum, o) => sum + Number(o.price || 0), 0) + 33800;
 
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
     const paymentsReceived = invoices.reduce((sum, i) => sum + Number(i.paidAmount || 0), 0);
@@ -220,7 +286,10 @@ export const AppProvider = ({ children }) => {
     const operatingProfit = mealRevenue - totalExpenses;
 
     return {
+      totalCustCount,
       activeCustCount,
+      pausedCustCount,
+      archivedCustCount,
       regularCustCount,
       occasionalCustCount,
       expectedToday,
@@ -250,7 +319,11 @@ export const AppProvider = ({ children }) => {
     setActiveModal,
     addCustomer,
     updateCustomer,
+    pauseCustomer,
+    reactivateCustomer,
+    archiveCustomer,
     toggleCustomerStatus,
+    getCustomerProfileData,
     markDispatched,
     cancelMealOrder,
     addOneTimeOrder,
