@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import { 
   INITIAL_CUSTOMERS, 
   INITIAL_MEAL_ORDERS, 
@@ -8,29 +8,225 @@ import {
   INITIAL_SETTINGS,
 } from '../data/mockData';
 import { getTodayIST, formatDateIST } from '../utils/date';
+import { isSupabaseConfigured, supabase } from '../services/supabaseClient';
 
 const AppContext = createContext(null);
 
 export const AppProvider = ({ children }) => {
-  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
-  const [mealOrders, setMealOrders] = useState(INITIAL_MEAL_ORDERS);
-  const [expenses, setExpenses] = useState(INITIAL_EXPENSES);
-  const [invoices, setInvoices] = useState(INITIAL_INVOICES);
-  const [activities, setActivities] = useState(INITIAL_ACTIVITIES);
+  const liveMode = isSupabaseConfigured();
+
+  const [customers, setCustomers] = useState(liveMode ? [] : INITIAL_CUSTOMERS);
+  const [mealOrders, setMealOrders] = useState(liveMode ? [] : INITIAL_MEAL_ORDERS);
+  const [expenses, setExpenses] = useState(liveMode ? [] : INITIAL_EXPENSES);
+  const [invoices, setInvoices] = useState(liveMode ? [] : INITIAL_INVOICES);
+  const [activities, setActivities] = useState(liveMode ? [] : INITIAL_ACTIVITIES);
   const [settings, setSettings] = useState(INITIAL_SETTINGS);
   const [activeModal, setActiveModal] = useState(null); // 'addCustomer' | 'addOrder' | 'generateBills' | 'addExpense' | null
   const [selectedDate, setSelectedDate] = useState('2026-11-06');
 
+  // Load live Supabase data on mount if configured
+  useEffect(() => {
+    if (!liveMode || !supabase) return;
+
+    async function loadFromSupabase() {
+      try {
+        // 1. Customers
+        const { data: cData } = await supabase
+          .from('customers')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (cData) {
+          setCustomers(
+            cData.map((c) => ({
+              id: c.id,
+              name: c.name,
+              phone: c.phone,
+              address: c.address,
+              type: c.type,
+              status: c.status,
+              lunchPrice: Number(c.lunch_price),
+              dinnerPrice: Number(c.dinner_price),
+              schedule: c.schedule || {},
+              instructions: c.instructions || '',
+              createdAt: c.created_at?.split('T')[0] || getTodayIST(),
+            }))
+          );
+        }
+
+        // 2. Expenses
+        const { data: eData } = await supabase
+          .from('expenses')
+          .select('*')
+          .order('date', { ascending: false });
+        if (eData) {
+          setExpenses(
+            eData.map((e) => ({
+              id: e.id,
+              title: e.title,
+              amount: Number(e.amount),
+              category: e.category,
+              date: e.date,
+              paymentMethod: e.payment_method,
+              vendor: e.vendor || '',
+              notes: e.notes || '',
+            }))
+          );
+        }
+
+        // 3. Meal Orders
+        const { data: oData } = await supabase
+          .from('meal_orders')
+          .select('*, customers(name, phone, address)')
+          .order('created_at', { ascending: true });
+        if (oData) {
+          setMealOrders(
+            oData.map((o) => ({
+              id: o.id,
+              customerId: o.customer_id,
+              customerName: o.customers?.name || 'Customer',
+              phone: o.customers?.phone || '',
+              address: o.customers?.address || '',
+              date: o.date,
+              mealType: o.meal_type,
+              price: Number(o.price),
+              source: o.source,
+              status: o.status,
+              dispatchedAt: o.dispatched_at,
+              instructions: o.instructions || '',
+            }))
+          );
+        }
+
+        // 4. Invoices
+        const { data: iData } = await supabase
+          .from('invoices')
+          .select('*, customers(name, phone, address), invoice_line_items(*), payments(*)')
+          .order('created_at', { ascending: false });
+        if (iData) {
+          setInvoices(
+            iData.map((inv) => ({
+              id: inv.id,
+              invoiceNumber: inv.invoice_number,
+              customerId: inv.customer_id,
+              customerName: inv.customers?.name || 'Customer',
+              customerPhone: inv.customers?.phone || '',
+              customerAddress: inv.customers?.address || '',
+              period: inv.period,
+              totalAmount: Number(inv.total_amount),
+              paidAmount: Number(inv.paid_amount),
+              balanceDue: Number(inv.balance_due),
+              status: inv.status,
+              mealCount: inv.meal_count,
+              createdAt: inv.created_at?.split('T')[0] || getTodayIST(),
+              lineItems: (inv.invoice_line_items || []).map((l) => ({
+                description: l.description,
+                unitPrice: Number(l.unit_price),
+                quantity: Number(l.quantity),
+                total: Number(l.total),
+              })),
+              payments: (inv.payments || []).map((p) => ({
+                id: p.id,
+                amount: Number(p.amount),
+                date: p.date,
+                paymentMethod: p.payment_method,
+                notes: p.notes,
+              })),
+            }))
+          );
+        }
+
+        // 5. Business Settings
+        const { data: sData } = await supabase
+          .from('business_settings')
+          .select('*')
+          .limit(1)
+          .single();
+        if (sData) {
+          setSettings({
+            businessName: sData.business_name,
+            ownerName: sData.owner_name,
+            phone: sData.phone,
+            whatsappNumber: sData.whatsapp_number,
+            upiId: sData.upi_id,
+            address: sData.address,
+            defaultLunchPrice: Number(sData.default_lunch_price),
+            defaultDinnerPrice: Number(sData.default_dinner_price),
+            lunchCutoff: sData.lunch_cutoff,
+            dinnerCutoff: sData.dinner_cutoff,
+            operatingDays: sData.operating_days || {},
+            currency: sData.currency || 'INR (₹)',
+            timezone: sData.timezone || 'Asia/Kolkata',
+            dateFormat: sData.date_format || 'DD/MM/YYYY',
+          });
+        }
+      } catch (err) {
+        console.error('Error loading data from Supabase:', err);
+      }
+    }
+
+    loadFromSupabase();
+  }, [liveMode]);
+
   // Business Settings Action
-  const updateSettings = (newSettings) => {
+  const updateSettings = async (newSettings) => {
+    if (liveMode && supabase) {
+      try {
+        await supabase
+          .from('business_settings')
+          .update({
+            business_name: newSettings.businessName,
+            owner_name: newSettings.ownerName,
+            phone: newSettings.phone,
+            whatsapp_number: newSettings.whatsappNumber,
+            upi_id: newSettings.upiId,
+            address: newSettings.address,
+            default_lunch_price: newSettings.defaultLunchPrice,
+            default_dinner_price: newSettings.defaultDinnerPrice,
+            lunch_cutoff: newSettings.lunchCutoff,
+            dinner_cutoff: newSettings.dinnerCutoff,
+            operating_days: newSettings.operatingDays,
+          })
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      } catch (e) {
+        console.error('Failed to update settings in Supabase:', e);
+      }
+    }
     setSettings((prev) => ({ ...prev, ...newSettings }));
   };
 
   // Customer Management Actions
-  const addCustomer = (customerData) => {
+  const addCustomer = async (customerData) => {
+    let newId = `cust-${Date.now()}`;
+    if (liveMode && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('customers')
+          .insert([
+            {
+              name: customerData.name,
+              phone: customerData.phone,
+              address: customerData.address,
+              type: customerData.type || 'regular',
+              status: 'active',
+              lunch_price: customerData.lunchPrice,
+              dinner_price: customerData.dinnerPrice,
+              schedule: customerData.schedule || {},
+              instructions: customerData.instructions || '',
+            },
+          ])
+          .select()
+          .single();
+        if (!error && data) {
+          newId = data.id;
+        }
+      } catch (e) {
+        console.error('Failed to insert customer into Supabase:', e);
+      }
+    }
+
     const newCust = {
       ...customerData,
-      id: `cust-${Date.now()}`,
+      id: newId,
       status: 'active',
       createdAt: getTodayIST(),
     };
@@ -51,11 +247,27 @@ export const AppProvider = ({ children }) => {
     return newCust;
   };
 
-  const updateCustomer = (id, updatedFields) => {
+  const updateCustomer = async (id, updatedFields) => {
+    if (liveMode && supabase) {
+      try {
+        const payload = {};
+        if (updatedFields.name) payload.name = updatedFields.name;
+        if (updatedFields.phone) payload.phone = updatedFields.phone;
+        if (updatedFields.address) payload.address = updatedFields.address;
+        if (updatedFields.status) payload.status = updatedFields.status;
+        if (updatedFields.lunchPrice !== undefined) payload.lunch_price = updatedFields.lunchPrice;
+        if (updatedFields.dinnerPrice !== undefined) payload.dinner_price = updatedFields.dinnerPrice;
+        if (updatedFields.schedule) payload.schedule = updatedFields.schedule;
+        if (updatedFields.instructions !== undefined) payload.instructions = updatedFields.instructions;
+        await supabase.from('customers').update(payload).eq('id', id);
+      } catch (e) {
+        console.error('Failed to update customer in Supabase:', e);
+      }
+    }
+
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id === id) {
-          // Rule: If price changes, historical dispatches are untouched!
           return { ...c, ...updatedFields };
         }
         return c;
@@ -304,11 +516,39 @@ export const AppProvider = ({ children }) => {
   };
 
   // Expense Actions
-  const addExpense = (expenseData) => {
+  const addExpense = async (expenseData) => {
+    let newId = `exp-${Date.now()}`;
+    const date = expenseData.date || getTodayIST();
+
+    if (liveMode && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('expenses')
+          .insert([
+            {
+              title: expenseData.title,
+              amount: expenseData.amount,
+              category: expenseData.category,
+              date,
+              payment_method: expenseData.paymentMethod || 'UPI',
+              vendor: expenseData.vendor || '',
+              notes: expenseData.notes || '',
+            },
+          ])
+          .select()
+          .single();
+        if (!error && data) {
+          newId = data.id;
+        }
+      } catch (e) {
+        console.error('Failed to insert expense into Supabase:', e);
+      }
+    }
+
     const newExp = {
       ...expenseData,
-      id: `exp-${Date.now()}`,
-      date: expenseData.date || getTodayIST(),
+      id: newId,
+      date,
     };
     setExpenses((prev) => [newExp, ...prev]);
 
@@ -328,13 +568,36 @@ export const AppProvider = ({ children }) => {
     return newExp;
   };
 
-  const updateExpense = (id, updatedData) => {
+  const updateExpense = async (id, updatedData) => {
+    if (liveMode && supabase) {
+      try {
+        const payload = {};
+        if (updatedData.title) payload.title = updatedData.title;
+        if (updatedData.amount !== undefined) payload.amount = updatedData.amount;
+        if (updatedData.category) payload.category = updatedData.category;
+        if (updatedData.date) payload.date = updatedData.date;
+        if (updatedData.paymentMethod) payload.payment_method = updatedData.paymentMethod;
+        if (updatedData.vendor !== undefined) payload.vendor = updatedData.vendor;
+        if (updatedData.notes !== undefined) payload.notes = updatedData.notes;
+        await supabase.from('expenses').update(payload).eq('id', id);
+      } catch (e) {
+        console.error('Failed to update expense in Supabase:', e);
+      }
+    }
+
     setExpenses((prev) =>
       prev.map((e) => (e.id === id ? { ...e, ...updatedData } : e))
     );
   };
 
-  const deleteExpense = (id) => {
+  const deleteExpense = async (id) => {
+    if (liveMode && supabase) {
+      try {
+        await supabase.from('expenses').delete().eq('id', id);
+      } catch (e) {
+        console.error('Failed to delete expense from Supabase:', e);
+      }
+    }
     setExpenses((prev) => prev.filter((e) => e.id !== id));
   };
 
