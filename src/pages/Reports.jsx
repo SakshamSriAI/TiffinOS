@@ -7,6 +7,7 @@ import { ExpenseDonutChart } from '../components/reports/ExpenseDonutChart';
 import { ProfitLossStatement } from '../components/reports/ProfitLossStatement';
 import { getCategoryById } from '../utils/expenseCategories';
 import { isSupabaseConfigured } from '../services/supabaseClient';
+import { formatDateIST, getTodayIST } from '../utils/date';
 
 export const Reports = () => {
   const { mealOrders, expenses, invoices } = useApp();
@@ -39,15 +40,13 @@ export const Reports = () => {
       }
     });
 
-    const liveMode = isSupabaseConfigured();
-    const baseline = liveMode ? 0 : 28500;
-    const total = lunch + dinner + oneTime + baseline;
+    const total = lunch + dinner + oneTime;
 
     return {
-      dispatchedCount: count + (liveMode ? 0 : 240),
-      lunchRevenue: lunch + (liveMode ? 0 : 15200),
-      dinnerRevenue: dinner + (liveMode ? 0 : 11800),
-      oneTimeRevenue: oneTime + (liveMode ? 0 : 1500),
+      dispatchedCount: count,
+      lunchRevenue: lunch,
+      dinnerRevenue: dinner,
+      oneTimeRevenue: oneTime,
       recognizedRevenue: total,
     };
   }, [mealOrders]);
@@ -91,44 +90,41 @@ export const Reports = () => {
   const outstanding = invoices.reduce((sum, i) => sum + Number(i.balanceDue || 0), 0);
   const collectionRate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
 
-  // 5. Daily Time-Series Data for Recharts
+  // 5. Daily Time-Series Data strictly from real dispatched orders & expenses
   const dailyChartData = useMemo(() => {
-    // Generate 6 days of November (Nov 1 to Nov 6)
-    const dates = [
-      { date: '2026-11-01', label: '01 Nov', baseRev: 5200, baseExp: 3900, lunch: 22, dinner: 20 },
-      { date: '2026-11-02', label: '02 Nov', baseRev: 5600, baseExp: 1200, lunch: 24, dinner: 22 },
-      { date: '2026-11-03', label: '03 Nov', baseRev: 5400, baseExp: 1850, lunch: 23, dinner: 21 },
-      { date: '2026-11-04', label: '04 Nov', baseRev: 5800, baseExp: 800,  lunch: 25, dinner: 23 },
-      { date: '2026-11-05', label: '05 Nov', baseRev: 6200, baseExp: 3800, lunch: 26, dinner: 24 },
-      { date: '2026-11-06', label: '06 Nov (Today)', baseRev: 0, baseExp: 0, lunch: 0, dinner: 0 },
-    ];
-
-    // Compute today's dynamic live numbers from current mealOrders & expenses
-    const todayOrders = mealOrders.filter((o) => o.date === '2026-11-06' && o.status === 'dispatched');
-    const todayLunch = todayOrders.filter((o) => o.mealType === 'lunch').length;
-    const todayDinner = todayOrders.filter((o) => o.mealType === 'dinner').length;
-    const todayRev = todayOrders.reduce((sum, o) => sum + Number(o.price || 0), 0) + 4800;
-
-    const todayExp = expenses
-      .filter((e) => e.date === '2026-11-06')
-      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const todayStr = getTodayIST();
+    const todayDate = new Date(`${todayStr}T12:00:00+05:30`);
+    
+    // Generate dates from beginning of month or past 6 days up to today
+    const dates = [];
+    const countDays = Math.max(6, todayDate.getDate());
+    for (let i = countDays - 1; i >= 0; i--) {
+      const d = new Date(todayDate);
+      d.setDate(todayDate.getDate() - i);
+      const iso = formatDateIST(d, 'iso');
+      const dayNum = String(d.getDate()).padStart(2, '0');
+      const monthShort = d.toLocaleString('en-IN', { month: 'short', timeZone: 'Asia/Kolkata' });
+      const label = iso === todayStr ? `${dayNum} ${monthShort} (Today)` : `${dayNum} ${monthShort}`;
+      dates.push({ date: iso, label });
+    }
 
     return dates.map((d) => {
-      if (d.date === '2026-11-06') {
-        return {
-          dateLabel: d.label,
-          revenue: todayRev,
-          expenses: todayExp,
-          lunch: todayLunch > 0 ? todayLunch + 18 : 22,
-          dinner: todayDinner > 0 ? todayDinner + 16 : 20,
-        };
-      }
+      const dayOrders = mealOrders.filter((o) => o.date === d.date && o.status === 'dispatched');
+      const dayLunch = dayOrders.filter((o) => o.mealType === 'lunch').length;
+      const dayDinner = dayOrders.filter((o) => o.mealType === 'dinner').length;
+      const dayRev = dayOrders.reduce((sum, o) => sum + Number(o.price || 0), 0);
+
+      const dayExp = expenses
+        .filter((e) => e.date === d.date)
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
       return {
         dateLabel: d.label,
-        revenue: d.baseRev,
-        expenses: d.baseExp,
-        lunch: d.lunch,
-        dinner: d.dinner,
+        date: d.date,
+        revenue: dayRev,
+        expenses: dayExp,
+        lunch: dayLunch,
+        dinner: dayDinner,
       };
     });
   }, [mealOrders, expenses]);

@@ -12,6 +12,9 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../common/Card';
 
 export const MealDispatchChart = ({ data = [] }) => {
+  const maxMeals = Math.max(0, ...data.map((d) => Math.max(d.lunch || 0, d.dinner || 0)));
+  const hasMeals = maxMeals > 0;
+
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const lunch = payload.find((p) => p.dataKey === 'lunch')?.value || 0;
@@ -48,7 +51,14 @@ export const MealDispatchChart = ({ data = [] }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Daily Meal Dispatch Volume</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Daily Meal Dispatch Volume</CardTitle>
+          {!hasMeals && (
+            <span className="text-[10px] font-semibold text-muted-text bg-surface-subtle px-2 py-0.5 rounded border border-border">
+              0 Meals
+            </span>
+          )}
+        </div>
         <CardDescription>
           Daily count of prepared and dispatched lunch boxes vs dinner boxes.
         </CardDescription>
@@ -72,6 +82,7 @@ export const MealDispatchChart = ({ data = [] }) => {
                 fontSize={11}
                 tickLine={false}
                 allowDecimals={false}
+                domain={hasMeals ? [0, 'auto'] : [0, 10]}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend

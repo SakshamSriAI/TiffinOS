@@ -13,6 +13,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../co
 import { formatINR } from '../../utils/currency';
 
 export const RevenueExpensesChart = ({ data = [] }) => {
+  const maxVal = Math.max(0, ...data.map((d) => Math.max(d.revenue || 0, d.expenses || 0)));
+  const hasData = maxVal > 0;
+
   // Custom Tooltip component
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -52,7 +55,14 @@ export const RevenueExpensesChart = ({ data = [] }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Daily Revenue vs. Operating Expenses</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Daily Revenue vs. Operating Expenses</CardTitle>
+          {!hasData && (
+            <span className="text-[10px] font-semibold text-muted-text bg-surface-subtle px-2 py-0.5 rounded border border-border">
+              ₹0 Recorded
+            </span>
+          )}
+        </div>
         <CardDescription>
           Daily meal dispatch revenue compared with recorded kitchen and operating costs.
         </CardDescription>
@@ -76,6 +86,7 @@ export const RevenueExpensesChart = ({ data = [] }) => {
                 fontSize={11}
                 tickLine={false}
                 tickFormatter={(val) => `₹${val}`}
+                domain={hasData ? [0, 'auto'] : [0, 500]}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend

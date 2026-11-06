@@ -1434,7 +1434,7 @@ export const AppProvider = ({ children }) => {
     // Month-to-date financials
     const mealRevenue = mealOrders
       .filter((o) => o.status === 'dispatched')
-      .reduce((sum, o) => sum + Number(o.price || 0), 0) + (liveMode ? 0 : 33800);
+      .reduce((sum, o) => sum + Number(o.price || 0), 0);
 
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
     const paymentsReceived = invoices.reduce((sum, i) => sum + Number(i.paidAmount || 0), 0);

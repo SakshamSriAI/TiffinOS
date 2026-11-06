@@ -6,10 +6,13 @@ import {
   Cell,
   Tooltip,
 } from 'recharts';
+import { PieChart as PieChartIcon } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../common/Card';
 import { formatINR } from '../../utils/currency';
 
 export const ExpenseDonutChart = ({ categoryBreakdown = [] }) => {
+  const hasExpenses = categoryBreakdown && categoryBreakdown.length > 0 && categoryBreakdown.some((c) => Number(c.amount || 0) > 0);
+
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const item = payload[0].payload;
@@ -33,13 +36,31 @@ export const ExpenseDonutChart = ({ categoryBreakdown = [] }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Expense Distribution by Category</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Expense Distribution by Category</CardTitle>
+          {!hasExpenses && (
+            <span className="text-[10px] font-semibold text-muted-text bg-surface-subtle px-2 py-0.5 rounded border border-border">
+              ₹0 Spent
+            </span>
+          )}
+        </div>
         <CardDescription>
           Proportion of business outflow spent on provisions, vegetables, gas, and wages.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        {!hasExpenses ? (
+          <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
+            <div className="w-12 h-12 rounded-full bg-surface-subtle flex items-center justify-center text-muted-text border border-border">
+              <PieChartIcon className="w-6 h-6 text-muted-text" />
+            </div>
+            <p className="text-sm font-semibold text-charcoal">No Expenses Recorded</p>
+            <p className="text-xs text-muted-text max-w-sm">
+              No kitchen or operating expenses have been logged for this period yet (₹0). Any recorded expenses will be categorized here automatically.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           
           {/* Donut Chart */}
           <div className="h-64 w-full sm:w-1/2">
@@ -95,6 +116,7 @@ export const ExpenseDonutChart = ({ categoryBreakdown = [] }) => {
           </div>
 
         </div>
+        )}
       </CardContent>
     </Card>
   );
