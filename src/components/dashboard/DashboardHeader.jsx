@@ -2,10 +2,15 @@ import React from 'react';
 import { Calendar, ShieldCheck, Clock, Store } from 'lucide-react';
 import { formatDateIST } from '../../utils/date';
 import { Badge } from '../common/Badge';
+import { useApp } from '../../context/AppContext';
 
 export const DashboardHeader = () => {
+  const { settings } = useApp();
   const fullDateIST = formatDateIST(new Date(), 'full');
   const currentTimeIST = formatDateIST(new Date(), 'time');
+
+  const businessName = settings?.businessName || 'Shree Annapurna Tiffins';
+  const ownerName = settings?.ownerName || 'Saksham';
 
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-2 border-b border-border/60">
@@ -13,7 +18,7 @@ export const DashboardHeader = () => {
       <div className="space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-forest-deep">
-            Namaste, Saksham 👋
+            Namaste, {ownerName} 👋
           </h1>
           <Badge variant="mint" size="sm">
             <span className="w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
@@ -22,7 +27,7 @@ export const DashboardHeader = () => {
         </div>
         <p className="text-xs sm:text-sm text-charcoal/80 flex items-center gap-1.5 flex-wrap">
           <span>Operations overview for</span>
-          <strong className="text-forest-deep font-semibold">Shree Annapurna Tiffins</strong>
+          <strong className="text-forest-deep font-semibold">{businessName}</strong>
           <span className="text-muted-text">· Single Family Kitchen</span>
         </p>
       </div>

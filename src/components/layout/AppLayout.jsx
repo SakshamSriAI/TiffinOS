@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { formatDateIST } from '../../utils/date';
 import { useSecurity } from '../../context/SecurityContext';
+import { useApp } from '../../context/AppContext';
 import { LockScreen } from '../security/LockScreen';
 
 const NAV_ITEMS = [
@@ -34,12 +35,23 @@ const NAV_ITEMS = [
 
 export const AppLayout = () => {
   const { isLocked, lock, isPrivacyMode, togglePrivacyMode } = useSecurity();
+  const { settings } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
   if (isLocked) {
     return <LockScreen />;
   }
+
+  const businessName = settings?.businessName || 'Shree Annapurna Tiffins';
+  const ownerName = settings?.ownerName || 'Saksham';
+  const ownerInitials = ownerName
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'SO';
 
   const currentNav = NAV_ITEMS.find((item) => location.pathname.startsWith(item.path)) || NAV_ITEMS[0];
   const todayFormatted = formatDateIST(new Date(), 'full');
@@ -69,7 +81,7 @@ export const AppLayout = () => {
 
         {/* Business quick info */}
         <div className="px-6 py-4 bg-white/5 border-b border-white/5">
-          <p className="text-xs font-semibold text-mint/90 truncate">Annapurna Tiffin Service</p>
+          <p className="text-xs font-semibold text-mint/90 truncate">{businessName}</p>
           <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-light">
             <ShieldCheck className="w-3.5 h-3.5 text-mint" />
             <span>Single Business Mode (INR)</span>
@@ -264,10 +276,10 @@ export const AppLayout = () => {
             </div>
             <div className="flex items-center gap-2 pl-2 border-l border-border">
               <div className="w-8 h-8 rounded-full bg-forest text-white flex items-center justify-center text-xs font-bold">
-                SO
+                {ownerInitials}
               </div>
               <div className="text-left">
-                <span className="text-xs font-semibold text-charcoal block leading-none">Saksham</span>
+                <span className="text-xs font-semibold text-charcoal block leading-none">{ownerName}</span>
                 <span className="text-[10px] text-muted-text">Business Owner</span>
               </div>
             </div>

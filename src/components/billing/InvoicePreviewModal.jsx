@@ -5,6 +5,7 @@ import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { formatINR } from '../../utils/currency';
 import { formatDateIST } from '../../utils/date';
+import { useApp } from '../../context/AppContext';
 
 export const InvoicePreviewModal = ({
   isOpen,
@@ -12,6 +13,7 @@ export const InvoicePreviewModal = ({
   invoice,
   onRecordPayment,
 }) => {
+  const { settings } = useApp();
   if (!isOpen || !invoice) return null;
 
   const handlePrint = () => {
@@ -74,14 +76,14 @@ export const InvoicePreviewModal = ({
               </div>
               <div>
                 <h2 className="text-lg font-bold text-forest-deep leading-tight">
-                  Shree Annapurna Tiffins
+                  {settings?.businessName || 'Shree Annapurna Tiffins'}
                 </h2>
                 <p className="text-[11px] text-muted-text">Family Edition · Kitchen Reg #452001</p>
               </div>
             </div>
             <p className="text-xs text-muted-text mt-2">
-              Plot 44, Kailash Nagar, Indore, MP 452001<br />
-              Contact: +91 98765 43210 · UPI: annapurnatiffin@upi
+              {settings?.address || 'Plot 44, Kailash Nagar, Indore, MP 452001'}<br />
+              Contact: {settings?.phone || '+91 98260 55432'} · UPI: {settings?.upiId || 'annapurnatiffin@okaxis'}
             </p>
           </div>
 
