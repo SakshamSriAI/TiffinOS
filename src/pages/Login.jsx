@@ -1,15 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, ShieldCheck, ArrowRight, AlertCircle, KeyRound, MessageCircle, Phone } from 'lucide-react';
+import { 
+  Lock, 
+  ShieldCheck, 
+  ArrowRight, 
+  AlertCircle, 
+  KeyRound, 
+  MessageCircle, 
+  Phone, 
+  Utensils, 
+  Sparkles 
+} from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card, CardContent } from '../components/common/Card';
 import { useSecurity } from '../context/SecurityContext';
-import { useApp } from '../context/AppContext';
 
 export const Login = () => {
   const { unlock } = useSecurity();
-  const { settings } = useApp();
   const [pin, setPin] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
@@ -31,9 +39,11 @@ export const Login = () => {
     }
   };
 
-  const businessPhone = settings?.phone || '+91 98260 55432';
-  const whatsappNum = settings?.whatsappNumber || businessPhone;
-  const cleanWhatsapp = whatsappNum.replace(/[^0-9]/g, '');
+  const foodOrderNumber = '+91 99350 99476';
+  const foodOrderClean = '919935099476';
+
+  const systemInquiryNumber = '+91 63885 38365';
+  const systemInquiryClean = '916388538365';
 
   return (
     <div className="min-h-screen bg-surface flex flex-col justify-center items-center p-4 antialiased">
@@ -96,31 +106,78 @@ export const Login = () => {
           </CardContent>
         </Card>
 
-        {/* Public Customer Subscription Box */}
-        <div className="p-4 bg-white rounded-card border border-border shadow-subtle text-center space-y-2">
-          <p className="text-xs font-semibold text-charcoal">
-            Looking to order delicious home-cooked tiffins?
-          </p>
-          <p className="text-[11px] text-muted-text">
-            Subscribe or order daily lunch & dinner directly with our kitchen:
-          </p>
-          <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
-            <a
-              href={`https://wa.me/${cleanWhatsapp}?text=Namaste!%20I%20would%20like%20to%20subscribe%20to%20your%20tiffin%20service.`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-button text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-xs"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-              WhatsApp Kitchen
-            </a>
-            <a
-              href={`tel:${businessPhone}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-button text-xs font-semibold text-charcoal bg-surface-subtle hover:bg-white border border-border transition-colors"
-            >
-              <Phone className="w-3.5 h-3.5 text-forest" />
-              Call {businessPhone}
-            </a>
+        {/* Public Visitor & Business Inquiries */}
+        <div className="space-y-3">
+          {/* Option 1: Order Food / Tiffin Service */}
+          <div className="p-4 bg-white rounded-card border border-border shadow-subtle space-y-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0 border border-emerald-200">
+                <Utensils className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold text-forest-deep leading-tight">
+                  Want to Order Food / Daily Tiffins?
+                </p>
+                <p className="text-[11px] text-muted-text">
+                  Subscribe to fresh, hot lunch & dinner delivery
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+              <a
+                href={`https://wa.me/${foodOrderClean}?text=Namaste!%20I%20would%20like%20to%20order%20food%20/%20subscribe%20to%20daily%20tiffin%20service.`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-button text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-xs"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                WhatsApp: {foodOrderNumber}
+              </a>
+              <a
+                href={`tel:${foodOrderClean}`}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-button text-xs font-semibold text-charcoal bg-surface-subtle hover:bg-white border border-border transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5 text-forest" />
+                Call {foodOrderNumber}
+              </a>
+            </div>
+          </div>
+
+          {/* Option 2: Get TiffinOS Management System for Your Business */}
+          <div className="p-4 bg-gradient-to-br from-white via-white to-mint/15 rounded-card border border-mint/40 shadow-subtle space-y-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-forest/10 text-forest flex items-center justify-center flex-shrink-0 border border-forest/20">
+                <Sparkles className="w-4 h-4 text-forest" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold text-forest-deep leading-tight">
+                  Want a System Like This for Your Business?
+                </p>
+                <p className="text-[11px] text-muted-text">
+                  Get your own custom management system for orders, billing & dispatches
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+              <a
+                href={`https://wa.me/${systemInquiryClean}?text=Hello!%20I%20am%20interested%20in%20getting%20a%20business%20management%20system%20like%20TiffinOS%20for%20my%20business.`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-button text-xs font-bold text-white bg-forest hover:bg-forest-deep transition-colors shadow-xs"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-mint" />
+                WhatsApp: {systemInquiryNumber}
+              </a>
+              <a
+                href={`tel:${systemInquiryClean}`}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-button text-xs font-semibold text-charcoal bg-white hover:bg-surface-subtle border border-border transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5 text-forest" />
+                Call {systemInquiryNumber}
+              </a>
+            </div>
           </div>
         </div>
 
