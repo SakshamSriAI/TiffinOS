@@ -24,6 +24,7 @@ import { Badge } from '../common/Badge';
 import { useApp } from '../../context/AppContext';
 import { formatINR } from '../../utils/currency';
 import { formatDateIST } from '../../utils/date';
+import CustomerMonthlyAttendanceRegister from './CustomerMonthlyAttendanceRegister';
 
 const DAYS = [
   { key: 'mon', label: 'Mon' },
@@ -50,7 +51,7 @@ export const CustomerProfileModal = ({
     deleteCustomer 
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'history' | 'invoices'
+  const [activeTab, setActiveTab] = useState('attendance'); // 'attendance' | 'history' | 'invoices'
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -82,7 +83,7 @@ export const CustomerProfileModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      size="xl"
+      size="2xl"
       title={`${customer.name}'s Profile`}
       description="Individual pricing agreement, weekly schedule, and financial ledger."
       footer={
@@ -264,33 +265,55 @@ export const CustomerProfileModal = ({
           </div>
         )}
 
-        {/* Tab Navigation for History & Invoices */}
+        {/* Tab Navigation for Monthly Register, Audit Trail & Invoices */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2 border-b border-border pb-2">
+          <div className="flex items-center gap-2 border-b border-border pb-2 flex-wrap">
             <button
-              onClick={() => setActiveTab('overview')}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-button transition-colors ${
-                activeTab === 'overview'
-                  ? 'bg-forest text-white'
+              onClick={() => setActiveTab('attendance')}
+              className={`text-xs font-bold px-3.5 py-1.5 rounded-button transition-colors flex items-center gap-1.5 ${
+                activeTab === 'attendance'
+                  ? 'bg-forest text-white shadow-xs'
+                  : 'text-muted-text hover:text-charcoal bg-surface-subtle'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Monthly Tiffin Register (महीने का रिकॉर्ड)</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-button transition-colors flex items-center gap-1.5 ${
+                activeTab === 'history'
+                  ? 'bg-forest text-white shadow-xs'
                   : 'text-muted-text hover:text-charcoal'
               }`}
             >
-              Meal Delivery History ({customerMeals.length})
+              <History className="w-3.5 h-3.5" />
+              <span>Dispatch Log ({customerMeals.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('invoices')}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-button transition-colors ${
+              className={`text-xs font-semibold px-3 py-1.5 rounded-button transition-colors flex items-center gap-1.5 ${
                 activeTab === 'invoices'
-                  ? 'bg-forest text-white'
+                  ? 'bg-forest text-white shadow-xs'
                   : 'text-muted-text hover:text-charcoal'
               }`}
             >
-              Invoices & Statements ({customerInvoices.length})
+              <Receipt className="w-3.5 h-3.5" />
+              <span>Invoices & Statements ({customerInvoices.length})</span>
             </button>
           </div>
 
-          {/* Tab 1: Meal History Audit Trail */}
-          {activeTab === 'overview' && (
+          {/* Tab 1: Tabular Monthly Tiffin Register */}
+          {activeTab === 'attendance' && (
+            <CustomerMonthlyAttendanceRegister
+              customer={customer}
+              customerMeals={customerMeals}
+              onClose={onClose}
+            />
+          )}
+
+          {/* Tab 2: Meal History Audit Trail */}
+          {activeTab === 'history' && (
             <div className="space-y-2">
               {customerMeals.length === 0 ? (
                 <div className="text-center py-6 text-xs text-muted-text bg-surface-subtle rounded-card border border-dashed border-border">

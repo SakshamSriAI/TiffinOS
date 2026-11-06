@@ -866,7 +866,7 @@ export const AppProvider = ({ children }) => {
     const dispatchedMeals = customerMeals.filter((m) => m.status === 'dispatched');
     const customerInvoices = invoices.filter((i) => i.customerId === customerId);
 
-    const totalDispatchedCount = dispatchedMeals.length + (!liveMode && customer.id === 'cust-1' ? 44 : 0);
+    const totalDispatchedCount = dispatchedMeals.length;
     const totalRecognizedBill = customerInvoices.length > 0
       ? customerInvoices.reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0)
       : dispatchedMeals.reduce((sum, m) => sum + Number(m.price || 0), 0);
