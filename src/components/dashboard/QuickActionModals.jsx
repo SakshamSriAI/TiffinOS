@@ -24,6 +24,7 @@ export const QuickActionModals = () => {
     addCustomer, 
     addOneTimeOrder, 
     addExpense,
+    generateBulkInvoices,
     mealOrders
   } = useApp();
 
@@ -436,7 +437,7 @@ export const QuickActionModals = () => {
               size="md"
               iconLeft={Receipt}
               onClick={() => {
-                alert('Monthly customer invoices successfully compiled from confirmed dispatched meals!');
+                generateBulkInvoices('01 Nov 2026 – 30 Nov 2026');
                 closeModal();
               }}
             >
@@ -454,12 +455,14 @@ export const QuickActionModals = () => {
             <div className="flex justify-between">
               <span className="text-muted-text">Eligible Dispatched Meals:</span>
               <span className="font-bold text-forest font-mono">
-                {mealOrders.filter((o) => o.status === 'dispatched').length + 290} Meals
+                {mealOrders.filter((o) => o.status === 'dispatched').length} Meals
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-text">Active Customers to Bill:</span>
-              <span className="font-semibold text-charcoal">{customers.length} Customers</span>
+              <span className="font-semibold text-charcoal">
+                {customers.filter((c) => c.status === 'active').length} Customers
+              </span>
             </div>
           </div>
 
