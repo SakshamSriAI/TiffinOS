@@ -34,6 +34,8 @@ export const QuickActionModals = () => {
   const [custLunchPrice, setCustLunchPrice] = useState('120');
   const [custDinnerPrice, setCustDinnerPrice] = useState('130');
   const [custType, setCustType] = useState('regular');
+  const [custIncludeLunch, setCustIncludeLunch] = useState(true);
+  const [custIncludeDinner, setCustIncludeDinner] = useState(true);
   const [custNotes, setCustNotes] = useState('');
 
   // Add One-Time Order State
@@ -57,6 +59,16 @@ export const QuickActionModals = () => {
     e.preventDefault();
     if (!custName.trim()) return;
 
+    const schedule = {
+      mon: { lunch: custIncludeLunch, dinner: custIncludeDinner },
+      tue: { lunch: custIncludeLunch, dinner: custIncludeDinner },
+      wed: { lunch: custIncludeLunch, dinner: custIncludeDinner },
+      thu: { lunch: custIncludeLunch, dinner: custIncludeDinner },
+      fri: { lunch: custIncludeLunch, dinner: custIncludeDinner },
+      sat: { lunch: custIncludeLunch, dinner: custIncludeDinner },
+      sun: { lunch: false, dinner: false },
+    };
+
     addCustomer({
       name: custName,
       phone: custPhone || '+91 98000 00000',
@@ -64,11 +76,7 @@ export const QuickActionModals = () => {
       lunchPrice: Number(custLunchPrice) || 120,
       dinnerPrice: Number(custDinnerPrice) || 130,
       type: custType,
-      schedule: {
-        days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
-        lunch: true,
-        dinner: true,
-      },
+      schedule: custType === 'regular' ? schedule : {},
       instructions: custNotes,
     });
 
@@ -186,6 +194,71 @@ export const QuickActionModals = () => {
               onChange={(e) => setCustDinnerPrice(e.target.value)}
               iconLeft={IndianRupee}
             />
+          </div>
+
+          {/* Active Delivery Services */}
+          <div>
+            <label className="block text-xs font-semibold text-charcoal mb-2">
+              Scheduled Daily Delivery Slots
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setCustIncludeLunch(!custIncludeLunch)}
+                className={`p-3 rounded-card border text-left flex items-center justify-between transition-all ${
+                  custIncludeLunch
+                    ? 'border-forest bg-forest/5 text-forest-deep shadow-xs'
+                    : 'border-border bg-surface-subtle text-muted-text hover:bg-white'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">☀️</span>
+                  <div>
+                    <div className="text-xs font-bold">Lunch Service</div>
+                    <div className="text-[10px] text-muted-text">₹{custLunchPrice}/dabba</div>
+                  </div>
+                </div>
+                <div
+                  className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] font-bold ${
+                    custIncludeLunch
+                      ? 'bg-forest text-white border-forest'
+                      : 'border-border bg-white'
+                  }`}
+                >
+                  {custIncludeLunch && '✓'}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCustIncludeDinner(!custIncludeDinner)}
+                className={`p-3 rounded-card border text-left flex items-center justify-between transition-all ${
+                  custIncludeDinner
+                    ? 'border-amber-accent bg-amber-accent/10 text-amber-900 shadow-xs'
+                    : 'border-border bg-surface-subtle text-muted-text hover:bg-white'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🌙</span>
+                  <div>
+                    <div className="text-xs font-bold">Dinner Service</div>
+                    <div className="text-[10px] text-muted-text">₹{custDinnerPrice}/dabba</div>
+                  </div>
+                </div>
+                <div
+                  className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] font-bold ${
+                    custIncludeDinner
+                      ? 'bg-amber-accent text-white border-amber-accent'
+                      : 'border-border bg-white'
+                  }`}
+                >
+                  {custIncludeDinner && '✓'}
+                </div>
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-text mt-1.5">
+              Active meal slots will automatically show in today's Lunch and Dinner dispatch line upon saving.
+            </p>
           </div>
 
           <Input

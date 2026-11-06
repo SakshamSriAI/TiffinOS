@@ -7,7 +7,7 @@ import {
   INITIAL_ACTIVITIES,
   INITIAL_SETTINGS,
 } from '../data/mockData';
-import { getTodayIST, formatDateIST } from '../utils/date';
+import { getTodayIST, formatDateIST, getDayOfWeekKey, isMealScheduledForDay } from '../utils/date';
 import { isSupabaseConfigured, supabase } from '../services/supabaseClient';
 
 const AppContext = createContext(null);
@@ -22,7 +22,7 @@ export const AppProvider = ({ children }) => {
   const [activities, setActivities] = useState(liveMode ? [] : INITIAL_ACTIVITIES);
   const [settings, setSettings] = useState(INITIAL_SETTINGS);
   const [activeModal, setActiveModal] = useState(null); // 'addCustomer' | 'addOrder' | 'generateBills' | 'addExpense' | null
-  const [selectedDate, setSelectedDate] = useState('2026-11-06');
+  const [selectedDate, setSelectedDate] = useState(() => getTodayIST());
 
   // Load live Supabase data on mount if configured
   useEffect(() => {
@@ -35,22 +35,23 @@ export const AppProvider = ({ children }) => {
           .from('customers')
           .select('*')
           .order('created_at', { ascending: false });
+        
+        let loadedCustomers = [];
         if (cData) {
-          setCustomers(
-            cData.map((c) => ({
-              id: c.id,
-              name: c.name,
-              phone: c.phone,
-              address: c.address,
-              type: c.type,
-              status: c.status,
-              lunchPrice: Number(c.lunch_price),
-              dinnerPrice: Number(c.dinner_price),
-              schedule: c.schedule || {},
-              instructions: c.instructions || '',
-              createdAt: c.created_at?.split('T')[0] || getTodayIST(),
-            }))
-          );
+          loadedCustomers = cData.map((c) => ({
+            id: c.id,
+            name: c.name,
+            phone: c.phone,
+            address: c.address,
+            type: c.type,
+            status: c.status,
+            lunchPrice: Number(c.lunch_price),
+            dinnerPrice: Number(c.dinner_price),
+            schedule: c.schedule || {},
+            instructions: c.instructions || '',
+            createdAt: c.created_at?.split('T')[0] || getTodayIST(),
+          }));
+          setCustomers(loadedCustomers);
         }
 
         // 2. Expenses
@@ -78,24 +79,119 @@ export const AppProvider = ({ children }) => {
           .from('meal_orders')
           .select('*, customers(name, phone, address)')
           .order('created_at', { ascending: true });
+        
+        let loadedOrders = [];
         if (oData) {
-          setMealOrders(
-            oData.map((o) => ({
-              id: o.id,
-              customerId: o.customer_id,
-              customerName: o.customers?.name || 'Customer',
-              phone: o.customers?.phone || '',
-              address: o.customers?.address || '',
-              date: o.date,
-              mealType: o.meal_type,
-              price: Number(o.price),
-              source: o.source,
-              status: o.status,
-              dispatchedAt: o.dispatched_at,
-              instructions: o.instructions || '',
-            }))
-          );
+          loadedOrders = oData.map((o) => ({
+            id: o.id,
+            customerId: o.customer_id,
+            customerName: o.customers?.name || 'Customer',
+            phone: o.customers?.phone || '',
+            address: o.customers?.address || '',
+            date: o.date,
+            mealType: o.meal_type,
+            price: Number(o.price),
+            source: o.source,
+            status: o.status,
+            dispatchedAt: o.dispatched_at,
+            instructions: o.instructions || '',
+          }));
         }
+
+        // AUTO-PROVISION TODAY'S SCHEDULED MEALS:
+        // Ensure any active regular customer (like Saksham) has their scheduled Lunch & Dinner
+        // orders present for today in the dispatch terminal & database.
+        const todayStr = getTodayIST();
+        const todayDay = getDayOfWeekKey(todayStr);
+        const missingOrders = [];
+
+        loadedCustomers.forEach((cust) => {
+          if (cust.status !== 'active' || cust.type !== 'regular') return;
+
+          const wantsLunch = isMealScheduledForDay(cust.schedule, todayDay, 'lunch');
+          const wantsDinner = isMealScheduledForDay(cust.schedule, todayDay, 'dinner');
+
+          const hasLunch = loadedOrders.some(
+            (o) => o.customerId === cust.id && o.date === todayStr && o.mealType === 'lunch'
+          );
+          const hasDinner = loadedOrders.some(
+            (o) => o.customerId === cust.id && o.date === todayStr && o.mealType === 'dinner'
+          );
+
+          if (wantsLunch && !hasLunch) {
+            missingOrders.push({
+              customer_id: cust.id,
+              date: todayStr,
+              meal_type: 'lunch',
+              price: cust.lunchPrice || 120,
+              source: 'regular',
+              status: 'pending',
+              instructions: cust.instructions || '',
+              _clientCust: cust,
+            });
+          }
+
+          if (wantsDinner && !hasDinner) {
+            missingOrders.push({
+              customer_id: cust.id,
+              date: todayStr,
+              meal_type: 'dinner',
+              price: cust.dinnerPrice || 130,
+              source: 'regular',
+              status: 'pending',
+              instructions: cust.instructions || '',
+              _clientCust: cust,
+            });
+          }
+        });
+
+        if (missingOrders.length > 0) {
+          try {
+            const dbPayload = missingOrders.map(({ _clientCust, ...rest }) => rest);
+            const { data: inserted, error: insErr } = await supabase
+              .from('meal_orders')
+              .insert(dbPayload)
+              .select('*, customers(name, phone, address)');
+
+            if (!insErr && inserted) {
+              const formatted = inserted.map((o) => ({
+                id: o.id,
+                customerId: o.customer_id,
+                customerName: o.customers?.name || 'Customer',
+                phone: o.customers?.phone || '',
+                address: o.customers?.address || '',
+                date: o.date,
+                mealType: o.meal_type,
+                price: Number(o.price),
+                source: o.source,
+                status: o.status,
+                dispatchedAt: o.dispatched_at,
+                instructions: o.instructions || '',
+              }));
+              loadedOrders = [...loadedOrders, ...formatted];
+            } else {
+              const fallback = missingOrders.map((m) => ({
+                id: `order-gen-${m.customer_id}-${m.meal_type}-${m.date}`,
+                customerId: m.customer_id,
+                customerName: m._clientCust.name,
+                phone: m._clientCust.phone,
+                address: m._clientCust.address,
+                date: m.date,
+                mealType: m.meal_type,
+                price: Number(m.price),
+                source: m.source,
+                status: m.status,
+                dispatchedAt: null,
+                instructions: m.instructions,
+              }));
+              loadedOrders = [...loadedOrders, ...fallback];
+            }
+          } catch (e) {
+            console.error('Error auto-generating today orders on load:', e);
+          }
+        }
+
+        setMealOrders(loadedOrders);
 
         // 4. Invoices
         const { data: iData } = await supabase
@@ -232,12 +328,110 @@ export const AppProvider = ({ children }) => {
     };
     setCustomers((prev) => [newCust, ...prev]);
 
+    // IMMEDIATELY auto-generate today's meal order(s) for lunch and/or dinner service
+    const todayStr = selectedDate || getTodayIST();
+    const todayDay = getDayOfWeekKey(todayStr);
+    const scheduledOrders = [];
+
+    if (newCust.type === 'regular') {
+      const wantsLunch = isMealScheduledForDay(newCust.schedule, todayDay, 'lunch');
+      const wantsDinner = isMealScheduledForDay(newCust.schedule, todayDay, 'dinner');
+
+      if (wantsLunch) {
+        scheduledOrders.push({
+          customerId: newCust.id,
+          customerName: newCust.name,
+          phone: newCust.phone,
+          address: newCust.address,
+          date: todayStr,
+          mealType: 'lunch',
+          price: Number(newCust.lunchPrice) || 120,
+          source: 'regular',
+          status: 'pending',
+          instructions: newCust.instructions || '',
+        });
+      }
+
+      if (wantsDinner) {
+        scheduledOrders.push({
+          customerId: newCust.id,
+          customerName: newCust.name,
+          phone: newCust.phone,
+          address: newCust.address,
+          date: todayStr,
+          mealType: 'dinner',
+          price: Number(newCust.dinnerPrice) || 130,
+          source: 'regular',
+          status: 'pending',
+          instructions: newCust.instructions || '',
+        });
+      }
+    }
+
+    if (scheduledOrders.length > 0) {
+      if (liveMode && supabase) {
+        try {
+          const dbPayload = scheduledOrders.map((o) => ({
+            customer_id: o.customerId,
+            date: o.date,
+            meal_type: o.mealType,
+            price: o.price,
+            source: o.source,
+            status: o.status,
+            instructions: o.instructions,
+          }));
+
+          const { data: dbOrders, error: ordErr } = await supabase
+            .from('meal_orders')
+            .insert(dbPayload)
+            .select('*, customers(name, phone, address)');
+
+          if (!ordErr && dbOrders) {
+            const formatted = dbOrders.map((o) => ({
+              id: o.id,
+              customerId: o.customer_id,
+              customerName: o.customers?.name || newCust.name,
+              phone: o.customers?.phone || newCust.phone,
+              address: o.customers?.address || newCust.address,
+              date: o.date,
+              mealType: o.meal_type,
+              price: Number(o.price),
+              source: o.source,
+              status: o.status,
+              dispatchedAt: o.dispatched_at,
+              instructions: o.instructions || '',
+            }));
+            setMealOrders((prev) => [...formatted, ...prev]);
+          } else {
+            const withIds = scheduledOrders.map((o) => ({
+              ...o,
+              id: `order-gen-${o.customerId}-${o.mealType}-${o.date}`,
+            }));
+            setMealOrders((prev) => [...withIds, ...prev]);
+          }
+        } catch (e) {
+          console.error('Failed to insert new customer orders to Supabase:', e);
+          const withIds = scheduledOrders.map((o) => ({
+            ...o,
+            id: `order-gen-${o.customerId}-${o.mealType}-${o.date}`,
+          }));
+          setMealOrders((prev) => [...withIds, ...prev]);
+        }
+      } else {
+        const withIds = scheduledOrders.map((o) => ({
+          ...o,
+          id: `order-gen-${o.customerId}-${o.mealType}-${o.date}`,
+        }));
+        setMealOrders((prev) => [...withIds, ...prev]);
+      }
+    }
+
     // Prepend activity
     const newActivity = {
       id: `act-${Date.now()}`,
       type: 'customer',
       title: 'New Customer Registered',
-      description: `${newCust.name} added with Lunch: ₹${newCust.lunchPrice}, Dinner: ₹${newCust.dinnerPrice}.`,
+      description: `${newCust.name} added with ${scheduledOrders.length} meal(s) queued for today's dispatch line.`,
       timestamp: 'Just now',
       badge: 'New',
       badgeVariant: 'forest',
@@ -274,8 +468,100 @@ export const AppProvider = ({ children }) => {
       })
     );
 
+    // If active regular customer and schedule updated, sync today's missing orders
     const cust = customers.find((c) => c.id === id);
     if (cust) {
+      const merged = { ...cust, ...updatedFields };
+      if (merged.status === 'active' && merged.type === 'regular') {
+        const todayStr = selectedDate || getTodayIST();
+        const todayDay = getDayOfWeekKey(todayStr);
+        const wantsLunch = isMealScheduledForDay(merged.schedule, todayDay, 'lunch');
+        const wantsDinner = isMealScheduledForDay(merged.schedule, todayDay, 'dinner');
+
+        const hasLunch = mealOrders.some(
+          (o) => o.customerId === id && o.date === todayStr && o.mealType === 'lunch'
+        );
+        const hasDinner = mealOrders.some(
+          (o) => o.customerId === id && o.date === todayStr && o.mealType === 'dinner'
+        );
+
+        const newOrders = [];
+        if (wantsLunch && !hasLunch) {
+          newOrders.push({
+            customerId: id,
+            customerName: merged.name,
+            phone: merged.phone,
+            address: merged.address,
+            date: todayStr,
+            mealType: 'lunch',
+            price: Number(merged.lunchPrice) || 120,
+            source: 'regular',
+            status: 'pending',
+            instructions: merged.instructions || '',
+          });
+        }
+        if (wantsDinner && !hasDinner) {
+          newOrders.push({
+            customerId: id,
+            customerName: merged.name,
+            phone: merged.phone,
+            address: merged.address,
+            date: todayStr,
+            mealType: 'dinner',
+            price: Number(merged.dinnerPrice) || 130,
+            source: 'regular',
+            status: 'pending',
+            instructions: merged.instructions || '',
+          });
+        }
+
+        if (newOrders.length > 0) {
+          if (liveMode && supabase) {
+            try {
+              const dbPayload = newOrders.map((o) => ({
+                customer_id: o.customerId,
+                date: o.date,
+                meal_type: o.mealType,
+                price: o.price,
+                source: o.source,
+                status: o.status,
+                instructions: o.instructions,
+              }));
+              const { data: dbOrders, error: ordErr } = await supabase
+                .from('meal_orders')
+                .insert(dbPayload)
+                .select('*, customers(name, phone, address)');
+
+              if (!ordErr && dbOrders) {
+                const formatted = dbOrders.map((o) => ({
+                  id: o.id,
+                  customerId: o.customer_id,
+                  customerName: o.customers?.name || merged.name,
+                  phone: o.customers?.phone || merged.phone,
+                  address: o.customers?.address || merged.address,
+                  date: o.date,
+                  mealType: o.meal_type,
+                  price: Number(o.price),
+                  source: o.source,
+                  status: o.status,
+                  dispatchedAt: o.dispatched_at,
+                  instructions: o.instructions || '',
+                }));
+                setMealOrders((prev) => [...formatted, ...prev]);
+              }
+            } catch (e) {
+              console.error('Failed to sync updated customer orders in Supabase:', e);
+            }
+          } else {
+            const withIds = newOrders.map((o) => ({
+              ...o,
+              id: `order-gen-${o.customerId}-${o.mealType}-${o.date}`,
+            }));
+            setMealOrders((prev) => [...withIds, ...prev]);
+          }
+        }
+      }
+
       const newActivity = {
         id: `act-${Date.now()}`,
         type: 'customer',
@@ -347,13 +633,24 @@ export const AppProvider = ({ children }) => {
 
   // DISPATCH MODULE ACTIONS
 
-  // 1. Mark as Dispatched (enforces timestamp, billable eligibility, single dispatch)
-  const markDispatched = (orderId) => {
+  // 1. Mark as Dispatched (enforces timestamp, billable eligibility, single dispatch, Supabase live sync)
+  const markDispatched = async (orderId) => {
     const order = mealOrders.find((o) => o.id === orderId);
     if (!order) return;
     if (order.status === 'dispatched') return; // Prevent duplicate dispatch
 
     const timeNow = formatDateIST(new Date(), 'time');
+
+    if (liveMode && supabase) {
+      try {
+        await supabase
+          .from('meal_orders')
+          .update({ status: 'dispatched', dispatched_at: timeNow })
+          .eq('id', orderId);
+      } catch (e) {
+        console.error('Failed to update meal order in Supabase:', e);
+      }
+    }
 
     setMealOrders((prev) =>
       prev.map((o) =>
@@ -376,19 +673,32 @@ export const AppProvider = ({ children }) => {
     setActivities((prev) => [newActivity, ...prev]);
   };
 
-  // 2. Cancel Meal Order (excluded from billing, preserved for audit)
-  const cancelMealOrder = (orderId, reason = 'Customer request') => {
+  // 2. Cancel Meal Order (excluded from billing, preserved for audit, Supabase live sync)
+  const cancelMealOrder = async (orderId, reason = 'Customer request') => {
+    const cancelInstructions = `Cancelled: ${reason}`;
+
+    if (liveMode && supabase) {
+      try {
+        await supabase
+          .from('meal_orders')
+          .update({ status: 'cancelled', instructions: cancelInstructions })
+          .eq('id', orderId);
+      } catch (e) {
+        console.error('Failed to cancel meal order in Supabase:', e);
+      }
+    }
+
     setMealOrders((prev) =>
       prev.map((o) =>
         o.id === orderId
-          ? { ...o, status: 'cancelled', instructions: `Cancelled: ${reason}` }
+          ? { ...o, status: 'cancelled', instructions: cancelInstructions }
           : o
       )
     );
   };
 
-  // 3. One-Time Order Creation (with duplicate prevention and multi-slot support)
-  const addOneTimeOrder = (orderData) => {
+  // 3. One-Time Order Creation (with duplicate prevention, multi-slot support, Supabase live sync)
+  const addOneTimeOrder = async (orderData) => {
     const slots = Array.isArray(orderData.mealSlots)
       ? orderData.mealSlots
       : [orderData.mealType || 'lunch'];
@@ -396,7 +706,7 @@ export const AppProvider = ({ children }) => {
     const createdOrders = [];
     const duplicates = [];
 
-    slots.forEach((slot) => {
+    for (const slot of slots) {
       // Duplicate prevention rule: Customer + Date + MealType must be unique
       const alreadyExists = mealOrders.some(
         (o) =>
@@ -407,15 +717,43 @@ export const AppProvider = ({ children }) => {
 
       if (alreadyExists) {
         duplicates.push(slot);
-        return;
+        continue;
       }
 
       const price = slot === 'lunch'
         ? (orderData.lunchPrice || orderData.price)
         : (orderData.dinnerPrice || orderData.price);
 
+      let orderId = `order-ot-${Date.now()}-${slot}`;
+
+      if (liveMode && supabase) {
+        try {
+          const { data, error } = await supabase
+            .from('meal_orders')
+            .insert([
+              {
+                customer_id: orderData.customerId,
+                date: orderData.date,
+                meal_type: slot,
+                price: Number(price),
+                source: 'one_time',
+                status: 'pending',
+                instructions: orderData.instructions || 'One-time order',
+              },
+            ])
+            .select()
+            .single();
+
+          if (!error && data) {
+            orderId = data.id;
+          }
+        } catch (e) {
+          console.error('Failed to insert one-time order into Supabase:', e);
+        }
+      }
+
       const newOrder = {
-        id: `order-ot-${Date.now()}-${slot}`,
+        id: orderId,
         customerId: orderData.customerId,
         customerName: orderData.customerName,
         date: orderData.date,
@@ -428,7 +766,7 @@ export const AppProvider = ({ children }) => {
         instructions: orderData.instructions || 'One-time order',
       };
       createdOrders.push(newOrder);
-    });
+    }
 
     if (createdOrders.length > 0) {
       setMealOrders((prev) => [...createdOrders, ...prev]);
@@ -448,23 +786,19 @@ export const AppProvider = ({ children }) => {
     return { created: createdOrders, duplicates };
   };
 
-  // 4. Automatic Scheduled Order Generator (with duplicate check!)
-  const generateDailyScheduledOrders = (dateStr) => {
-    const d = new Date(dateStr);
-    const daysMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    const dayOfWeek = daysMap[d.getDay()];
+  // 4. Automatic Scheduled Order Generator (with duplicate check & Supabase sync!)
+  const generateDailyScheduledOrders = async (dateStr) => {
+    const dayOfWeek = getDayOfWeekKey(dateStr);
 
     const activeRegulars = customers.filter(
       (c) => c.status === 'active' && c.type === 'regular'
     );
     const newOrders = [];
+    const supabasePayload = [];
 
     activeRegulars.forEach((cust) => {
-      const daySchedule = cust.schedule?.[dayOfWeek];
-      if (!daySchedule) return;
-
       // Check lunch
-      if (daySchedule.lunch) {
+      if (isMealScheduledForDay(cust.schedule, dayOfWeek, 'lunch')) {
         const alreadyExists = mealOrders.some(
           (o) => o.customerId === cust.id && o.date === dateStr && o.mealType === 'lunch'
         );
@@ -482,11 +816,20 @@ export const AppProvider = ({ children }) => {
             address: cust.address,
             phone: cust.phone,
           });
+          supabasePayload.push({
+            customer_id: cust.id,
+            date: dateStr,
+            meal_type: 'lunch',
+            price: cust.lunchPrice,
+            source: 'regular',
+            status: 'pending',
+            instructions: cust.instructions || '',
+          });
         }
       }
 
       // Check dinner
-      if (daySchedule.dinner) {
+      if (isMealScheduledForDay(cust.schedule, dayOfWeek, 'dinner')) {
         const alreadyExists = mealOrders.some(
           (o) => o.customerId === cust.id && o.date === dateStr && o.mealType === 'dinner'
         );
@@ -504,11 +847,50 @@ export const AppProvider = ({ children }) => {
             address: cust.address,
             phone: cust.phone,
           });
+          supabasePayload.push({
+            customer_id: cust.id,
+            date: dateStr,
+            meal_type: 'dinner',
+            price: cust.dinnerPrice,
+            source: 'regular',
+            status: 'pending',
+            instructions: cust.instructions || '',
+          });
         }
       }
     });
 
     if (newOrders.length > 0) {
+      if (liveMode && supabase && supabasePayload.length > 0) {
+        try {
+          const { data: dbOrders, error } = await supabase
+            .from('meal_orders')
+            .insert(supabasePayload)
+            .select('*, customers(name, phone, address)');
+
+          if (!error && dbOrders) {
+            const formatted = dbOrders.map((o) => ({
+              id: o.id,
+              customerId: o.customer_id,
+              customerName: o.customers?.name || 'Customer',
+              phone: o.customers?.phone || '',
+              address: o.customers?.address || '',
+              date: o.date,
+              mealType: o.meal_type,
+              price: Number(o.price),
+              source: o.source,
+              status: o.status,
+              dispatchedAt: o.dispatched_at,
+              instructions: o.instructions || '',
+            }));
+            setMealOrders((prev) => [...prev, ...formatted]);
+            return formatted.length;
+          }
+        } catch (e) {
+          console.error('Failed to insert daily orders into Supabase:', e);
+        }
+      }
+
       setMealOrders((prev) => [...prev, ...newOrders]);
       return newOrders.length;
     }
@@ -798,7 +1180,7 @@ export const AppProvider = ({ children }) => {
     // Month-to-date financials
     const mealRevenue = mealOrders
       .filter((o) => o.status === 'dispatched')
-      .reduce((sum, o) => sum + Number(o.price || 0), 0) + 33800;
+      .reduce((sum, o) => sum + Number(o.price || 0), 0) + (liveMode ? 0 : 33800);
 
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
     const paymentsReceived = invoices.reduce((sum, i) => sum + Number(i.paidAmount || 0), 0);

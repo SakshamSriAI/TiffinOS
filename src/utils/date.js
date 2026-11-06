@@ -54,3 +54,42 @@ export const formatDateIST = (dateInput, formatType = 'display') => {
 export const getTodayIST = () => {
   return formatDateIST(new Date(), 'iso');
 };
+
+/**
+ * Get 3-letter lowercase day of week in IST ('mon', 'tue', etc.)
+ */
+export const getDayOfWeekKey = (dateInput) => {
+  if (!dateInput) return 'fri';
+  const dateStr = typeof dateInput === 'string' ? dateInput : formatDateIST(dateInput, 'iso');
+  const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00+05:30`);
+  const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  return days[d.getDay()] || 'fri';
+};
+
+/**
+ * Determine if a customer's schedule has a specific meal (lunch/dinner) on a given day key
+ */
+export const isMealScheduledForDay = (schedule, dayKey, mealType) => {
+  if (!schedule || typeof schedule !== 'object') return false;
+
+  // Format 1: schedule[dayKey] is object { lunch: bool, dinner: bool }
+  if (schedule[dayKey] && typeof schedule[dayKey] === 'object') {
+    return Boolean(schedule[dayKey][mealType]);
+  }
+
+  // Format 2: schedule.days is array of string day keys
+  if (Array.isArray(schedule.days)) {
+    if (!schedule.days.includes(dayKey)) return false;
+    return Boolean(schedule[mealType]);
+  }
+
+  // Format 3: boolean values directly on schedule
+  if (schedule[mealType] === true) {
+    if (schedule.operatingDays && typeof schedule.operatingDays === 'object') {
+      return Boolean(schedule.operatingDays[dayKey]);
+    }
+    return dayKey !== 'sun';
+  }
+
+  return false;
+};

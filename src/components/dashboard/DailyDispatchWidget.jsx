@@ -109,7 +109,7 @@ export const DailyDispatchWidget = () => {
             <div className="flex items-center justify-between text-[11px] text-muted-text">
               <span>{lunchPercent}% Completed</span>
               <span className="font-semibold text-forest">
-                {lunchTotal - lunchDispatched === 0 ? 'All Delivered' : `${lunchTotal - lunchDispatched} Remaining`}
+                {lunchTotal === 0 ? '0 Scheduled' : lunchTotal - lunchDispatched === 0 ? 'All Delivered' : `${lunchTotal - lunchDispatched} Remaining`}
               </span>
             </div>
           </div>
@@ -142,7 +142,7 @@ export const DailyDispatchWidget = () => {
             <div className="flex items-center justify-between text-[11px] text-muted-text">
               <span>{dinnerPercent}% Completed</span>
               <span className="font-semibold text-amber-dark">
-                {dinnerTotal - dinnerDispatched} Boxes Ready to Pack
+                {dinnerTotal === 0 ? '0 Scheduled' : dinnerTotal - dinnerDispatched === 0 ? 'All Delivered' : `${dinnerTotal - dinnerDispatched} Boxes Ready to Pack`}
               </span>
             </div>
           </div>

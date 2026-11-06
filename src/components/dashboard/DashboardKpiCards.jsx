@@ -92,7 +92,9 @@ export const DashboardKpiCards = () => {
               {metrics.pendingToday}
             </span>
             <p className="text-[11px] text-amber-800 font-medium mt-1 truncate">
-              {metrics.dinnerOrders.filter(o => o.status === 'pending').length} dinner boxes pending
+              {metrics.pendingToday === 0
+                ? 'All meals dispatched'
+                : `${metrics.lunchOrders.filter(o => o.status === 'pending').length} Lunch · ${metrics.dinnerOrders.filter(o => o.status === 'pending').length} Dinner pending`}
             </p>
           </div>
         </CardContent>
