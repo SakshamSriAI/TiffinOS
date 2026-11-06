@@ -19,6 +19,7 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Badge } from '../components/common/Badge';
 import { useApp } from '../context/AppContext';
+import { DatabaseConnectionStatus } from '../components/settings/DatabaseConnectionStatus';
 
 export const Settings = () => {
   const { settings, updateSettings, customers, mealOrders, expenses, invoices } = useApp();
@@ -373,7 +374,10 @@ export const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* 5. Data Management & Local Backup */}
+        {/* 5. Supabase Backend Architecture & Connection Status */}
+        <DatabaseConnectionStatus />
+
+        {/* 6. Data Management & Local Backup */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
