@@ -6,6 +6,7 @@ import { MealDispatchChart } from '../components/reports/MealDispatchChart';
 import { ExpenseDonutChart } from '../components/reports/ExpenseDonutChart';
 import { ProfitLossStatement } from '../components/reports/ProfitLossStatement';
 import { getCategoryById } from '../utils/expenseCategories';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 
 export const Reports = () => {
   const { mealOrders, expenses, invoices } = useApp();
@@ -38,15 +39,15 @@ export const Reports = () => {
       }
     });
 
-    // Add baseline past days in billing cycle for full monthly representation
-    const baseline = 28500;
+    const liveMode = isSupabaseConfigured();
+    const baseline = liveMode ? 0 : 28500;
     const total = lunch + dinner + oneTime + baseline;
 
     return {
-      dispatchedCount: count + 240,
-      lunchRevenue: lunch + 15200,
-      dinnerRevenue: dinner + 11800,
-      oneTimeRevenue: oneTime + 1500,
+      dispatchedCount: count + (liveMode ? 0 : 240),
+      lunchRevenue: lunch + (liveMode ? 0 : 15200),
+      dinnerRevenue: dinner + (liveMode ? 0 : 11800),
+      oneTimeRevenue: oneTime + (liveMode ? 0 : 1500),
       recognizedRevenue: total,
     };
   }, [mealOrders]);

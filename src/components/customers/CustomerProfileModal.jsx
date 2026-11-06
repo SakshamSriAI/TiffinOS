@@ -220,7 +220,7 @@ export const CustomerProfileModal = ({
 
           <div className="p-3 bg-white rounded-card border border-border shadow-subtle">
             <span className="text-[10px] uppercase font-semibold text-muted-text block">Monthly Bill</span>
-            <span className="text-lg font-bold text-forest font-mono mt-0.5 block">{formatINR(totalRecognizedBill || totalDispatchedCount * customer.lunchPrice)}</span>
+            <span className="text-lg font-bold text-forest font-mono mt-0.5 block">{formatINR(totalRecognizedBill)}</span>
             <span className="text-[10px] text-muted-text">Dispatched value</span>
           </div>
 
