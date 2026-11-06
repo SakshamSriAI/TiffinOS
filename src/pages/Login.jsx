@@ -1,23 +1,42 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Lock, ShieldCheck, ArrowRight, AlertCircle, KeyRound, MessageCircle, Phone } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/common/Card';
+import { Card, CardContent } from '../components/common/Card';
+import { useSecurity } from '../context/SecurityContext';
+import { useApp } from '../context/AppContext';
 
 export const Login = () => {
-  const [email, setEmail] = useState('owner@annapurnatiffins.com');
-  const [password, setPassword] = useState('••••••••••••');
+  const { unlock } = useSecurity();
+  const { settings } = useApp();
+  const [pin, setPin] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // Frontend demo login
-    navigate('/app/dashboard');
+    if (!pin.trim()) {
+      setErrorMessage('Please enter your Master Passcode.');
+      return;
+    }
+
+    const success = unlock(pin.trim());
+    if (success) {
+      setErrorMessage('');
+      navigate('/app/dashboard');
+    } else {
+      setErrorMessage('Access Denied: Incorrect Master Passcode.');
+      setPin('');
+    }
   };
 
+  const businessPhone = settings?.phone || '+91 98260 55432';
+  const whatsappNum = settings?.whatsappNumber || businessPhone;
+  const cleanWhatsapp = whatsappNum.replace(/[^0-9]/g, '');
+
   return (
-    <div className="min-h-screen bg-surface flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-surface flex flex-col justify-center items-center p-4 antialiased">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-center gap-2 group">
@@ -30,30 +49,33 @@ export const Login = () => {
             </div>
             <span className="text-xl font-bold tracking-tight text-forest-deep">TiffinOS</span>
           </Link>
-          <h1 className="text-xl font-bold text-charcoal">Sign in to Owner Dashboard</h1>
-          <p className="text-xs text-muted-text">Authorized business owner access only</p>
+          <h1 className="text-xl font-bold text-charcoal">Owner Access Portal</h1>
+          <p className="text-xs text-muted-text">Authorized business management authentication</p>
         </div>
 
         <Card className="shadow-card border-border">
           <CardContent className="p-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <Input
-                label="Owner Email Address"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                iconLeft={Mail}
+                label="Master Passcode (PIN)"
+                type="password"
+                placeholder="Enter 4-digit Master Passcode"
+                value={pin}
+                onChange={(e) => {
+                  setPin(e.target.value);
+                  setErrorMessage('');
+                }}
+                iconLeft={KeyRound}
                 required={true}
+                autoFocus
               />
 
-              <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                iconLeft={Lock}
-                required={true}
-              />
+              {errorMessage && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-button text-xs text-status-error flex items-center gap-2 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
 
               <Button
                 type="submit"
@@ -62,17 +84,45 @@ export const Login = () => {
                 className="w-full mt-2"
                 iconRight={ArrowRight}
               >
-                Access Business Portal
+                Unlock Business Dashboard
               </Button>
             </form>
 
-            <div className="mt-5 pt-4 border-t border-border/60 text-center">
+            <div className="mt-5 pt-4 border-t border-border/60 text-center space-y-1">
               <p className="text-xs text-muted-text">
-                Demo Mode: Click above to sign directly into the dashboard.
+                Protected by TiffinOS Passcode Encryption
               </p>
             </div>
           </CardContent>
         </Card>
+
+        {/* Public Customer Subscription Box */}
+        <div className="p-4 bg-white rounded-card border border-border shadow-subtle text-center space-y-2">
+          <p className="text-xs font-semibold text-charcoal">
+            Looking to order delicious home-cooked tiffins?
+          </p>
+          <p className="text-[11px] text-muted-text">
+            Subscribe or order daily lunch & dinner directly with our kitchen:
+          </p>
+          <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+            <a
+              href={`https://wa.me/${cleanWhatsapp}?text=Namaste!%20I%20would%20like%20to%20subscribe%20to%20your%20tiffin%20service.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-button text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-xs"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              WhatsApp Kitchen
+            </a>
+            <a
+              href={`tel:${businessPhone}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-button text-xs font-semibold text-charcoal bg-surface-subtle hover:bg-white border border-border transition-colors"
+            >
+              <Phone className="w-3.5 h-3.5 text-forest" />
+              Call {businessPhone}
+            </a>
+          </div>
+        </div>
 
         <div className="text-center">
           <Link to="/" className="text-xs text-forest font-semibold hover:underline">

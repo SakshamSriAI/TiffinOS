@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Lock, Unlock, Shield, AlertCircle, Delete, Eye, EyeOff } from 'lucide-react';
 import { useSecurity } from '../../context/SecurityContext';
 
@@ -146,14 +147,16 @@ export const LockScreen = () => {
           </button>
         </div>
 
-        {/* Default Passcode Hint for Owner */}
-        <div className="pt-4 text-center">
-          <p className="text-[11px] text-muted-light">
-            Default initial passcode: <span className="font-mono text-mint font-bold">1234</span>
+        {/* Public Website Link and Security Notice */}
+        <div className="pt-3 text-center space-y-2">
+          <p className="text-[11px] text-mint/80">
+            Authorized Owner Access Only · Single Business Security
           </p>
-          <p className="text-[10px] text-muted-light/60 mt-0.5">
-            You can customize your passcode anytime in Business Settings.
-          </p>
+          <div>
+            <Link to="/" className="text-xs text-mint font-semibold hover:underline inline-flex items-center gap-1">
+              ← Return to Public Website
+            </Link>
+          </div>
         </div>
 
       </div>

@@ -122,14 +122,25 @@ export const AppLayout = () => {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-white/10 bg-white/5">
+        <div className="p-4 border-t border-white/10 bg-white/5 space-y-1">
+          <button
+            type="button"
+            onClick={lock}
+            className="w-full flex items-center justify-between text-xs text-rose-300 hover:text-white hover:bg-white/10 rounded px-2 py-1.5 transition-colors"
+            title="Lock Session & Require Passcode"
+          >
+            <span className="flex items-center gap-2">
+              <Lock className="w-3.5 h-3.5" />
+              Lock Session
+            </span>
+          </button>
           <NavLink
             to="/"
-            className="flex items-center justify-between text-xs text-muted-light hover:text-white transition-colors py-1.5"
+            className="flex items-center justify-between text-xs text-muted-light hover:text-white transition-colors px-2 py-1.5"
           >
             <span className="flex items-center gap-2">
               <ExternalLink className="w-3.5 h-3.5" />
-              Public Landing Page
+              Public Website
             </span>
           </NavLink>
         </div>

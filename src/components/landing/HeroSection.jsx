@@ -48,7 +48,7 @@ export const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="animate-hero-cta flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-2">
-              <Link to="/app/dashboard" className="w-full sm:w-auto">
+              <Link to="/login" className="w-full sm:w-auto">
                 <Button variant="primary" size="lg" className="w-full sm:w-auto transition-transform hover:-translate-y-0.5" iconRight={ArrowRight}>
                   Get Started
                 </Button>
@@ -242,7 +242,7 @@ export const HeroSection = () => {
                     <span className="text-muted-light">Recognized Revenue (Nov):</span>
                     <span className="font-bold font-mono text-white">{formatINR(34800)}</span>
                   </div>
-                  <Link to="/app/dashboard" className="text-mint hover:underline font-semibold flex items-center gap-1 group">
+                  <Link to="/login" className="text-mint hover:underline font-semibold flex items-center gap-1 group">
                     <span>Open Full System</span>
                     <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                   </Link>

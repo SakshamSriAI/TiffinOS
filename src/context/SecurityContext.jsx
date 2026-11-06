@@ -5,6 +5,7 @@ const SecurityContext = createContext(null);
 const STORAGE_KEY_PASSCODE = 'tiffinos_master_passcode';
 const STORAGE_KEY_AUTO_LOCK = 'tiffinos_auto_lock_minutes';
 const STORAGE_KEY_PRIVACY = 'tiffinos_privacy_mode';
+const STORAGE_KEY_SESSION = 'tiffinos_session_unlocked';
 
 export const SecurityProvider = ({ children }) => {
   // Stored Master PIN (default: '1234')
@@ -22,8 +23,10 @@ export const SecurityProvider = ({ children }) => {
     return localStorage.getItem(STORAGE_KEY_PRIVACY) === 'true';
   });
 
-  // Lock state
-  const [isLocked, setIsLocked] = useState(false);
+  // Lock state: Default locked for any new visitor or fresh session until authenticated with Master Passcode
+  const [isLocked, setIsLocked] = useState(() => {
+    return sessionStorage.getItem(STORAGE_KEY_SESSION) !== 'true';
+  });
 
   const inactivityTimerRef = useRef(null);
 
@@ -60,6 +63,7 @@ export const SecurityProvider = ({ children }) => {
 
   const unlock = (enteredPin) => {
     if (enteredPin === passcode) {
+      sessionStorage.setItem(STORAGE_KEY_SESSION, 'true');
       setIsLocked(false);
       resetInactivityTimer();
       return true;
@@ -68,6 +72,7 @@ export const SecurityProvider = ({ children }) => {
   };
 
   const lock = () => {
+    sessionStorage.removeItem(STORAGE_KEY_SESSION);
     setIsLocked(true);
   };
 

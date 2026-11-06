@@ -72,7 +72,7 @@ export const LandingNavbar = () => {
                 Login
               </Button>
             </Link>
-            <Link to="/app/dashboard">
+            <Link to="/login">
               <Button variant="primary" size="sm" iconRight={ArrowRight}>
                 Get Started
               </Button>
@@ -133,7 +133,7 @@ export const LandingNavbar = () => {
                 Login
               </Button>
             </Link>
-            <Link to="/app/dashboard" onClick={() => setMobileMenuOpen(false)}>
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="primary" size="md" className="w-full" iconRight={ArrowRight}>
                 Get Started
               </Button>

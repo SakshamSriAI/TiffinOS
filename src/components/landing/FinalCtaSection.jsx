@@ -33,7 +33,7 @@ export const FinalCtaSection = () => {
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-              <Link to="/app/dashboard" className="w-full sm:w-auto">
+              <Link to="/login" className="w-full sm:w-auto">
                 <Button variant="primary" size="lg" className="w-full sm:w-auto hover:-translate-y-0.5 transition-transform" iconRight={ArrowRight}>
                   Get Started
                 </Button>
