@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { Database, CheckCircle2, AlertCircle, RefreshCw, Server, ShieldCheck, ExternalLink, Code } from 'lucide-react';
+import { Database, CheckCircle2, AlertCircle, RefreshCw, Server, ShieldCheck, UploadCloud, Code } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../common/Card';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
-import { isSupabaseConfigured, testSupabaseConnection } from '../../services/supabaseClient';
+import { isSupabaseConfigured, testSupabaseConnection, supabase } from '../../services/supabaseClient';
+import { INITIAL_CUSTOMERS, INITIAL_EXPENSES } from '../../data/mockData';
 
 export const DatabaseConnectionStatus = () => {
   const isConfigured = isSupabaseConfigured();
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState(null);
   const [showSqlGuide, setShowSqlGuide] = useState(false);
 
   const handleTestConnection = async () => {
@@ -24,6 +27,47 @@ export const DatabaseConnectionStatus = () => {
       });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleSyncToSupabase = async () => {
+    if (!isConfigured) return;
+    setSyncing(true);
+    setSyncFeedback(null);
+    try {
+      // 1. Upload Customers
+      const custRows = INITIAL_CUSTOMERS.map((c) => ({
+        name: c.name,
+        phone: c.phone,
+        address: c.address,
+        type: c.type,
+        status: c.status,
+        lunch_price: c.lunchPrice,
+        dinner_price: c.dinnerPrice,
+        schedule: c.schedule,
+        instructions: c.instructions,
+      }));
+      const { error: custErr } = await supabase.from('customers').insert(custRows);
+      if (custErr) throw custErr;
+
+      // 2. Upload Expenses
+      const expRows = INITIAL_EXPENSES.map((e) => ({
+        title: e.title,
+        amount: e.amount,
+        category: e.category,
+        date: e.date,
+        payment_method: e.paymentMethod,
+        vendor: e.vendor,
+        notes: e.notes,
+      }));
+      const { error: expErr } = await supabase.from('expenses').insert(expRows);
+      if (expErr) throw expErr;
+
+      setSyncFeedback('Successfully uploaded customers and expenses to your Supabase PostgreSQL database!');
+    } catch (err) {
+      setSyncFeedback(`Sync failed: ${err.message}`);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -59,15 +103,29 @@ export const DatabaseConnectionStatus = () => {
               </p>
             </div>
             
-            <Button
-              variant="secondary"
-              size="sm"
-              iconLeft={RefreshCw}
-              onClick={handleTestConnection}
-              disabled={testing}
-            >
-              {testing ? 'Testing...' : 'Test Connection'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                iconLeft={RefreshCw}
+                onClick={handleTestConnection}
+                disabled={testing}
+              >
+                {testing ? 'Testing...' : 'Test Connection'}
+              </Button>
+
+              {isConfigured && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  iconLeft={UploadCloud}
+                  onClick={handleSyncToSupabase}
+                  disabled={syncing}
+                >
+                  {syncing ? 'Syncing...' : 'Sync Data to Supabase'}
+                </Button>
+              )}
+            </div>
           </div>
 
           <p className="text-xs text-muted-text">
@@ -95,6 +153,13 @@ export const DatabaseConnectionStatus = () => {
                   <p className="text-[11px] text-muted-text mt-0.5">Response latency: {testResult.latencyMs}ms</p>
                 )}
               </div>
+            </div>
+          )}
+
+          {syncFeedback && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-status-success text-xs rounded-button flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>{syncFeedback}</span>
             </div>
           )}
         </div>
