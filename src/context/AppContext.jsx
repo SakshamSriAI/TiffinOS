@@ -321,6 +321,12 @@ export const AppProvider = ({ children }) => {
     return newExp;
   };
 
+  const updateExpense = (id, updatedData) => {
+    setExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updatedData } : e))
+    );
+  };
+
   const deleteExpense = (id) => {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
   };
@@ -574,6 +580,7 @@ export const AppProvider = ({ children }) => {
     addOneTimeOrder,
     generateDailyScheduledOrders,
     addExpense,
+    updateExpense,
     deleteExpense,
     recordPayment,
     generateCustomerInvoice,
