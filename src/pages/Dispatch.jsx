@@ -1,105 +1,157 @@
-import React from 'react';
-import { Truck, Calendar, CheckCircle2, XCircle, Plus, Search } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/common/Card';
-import { Button } from '../components/common/Button';
-import { Badge } from '../components/common/Badge';
-import { Input } from '../components/common/Input';
-import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '../components/common/Table';
-import { formatINR } from '../utils/currency';
-import { formatDateIST } from '../utils/date';
+import React, { useState, useMemo } from 'react';
+import { Truck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import DispatchHeader from '../components/dispatch/DispatchHeader';
+import DispatchStatsBar from '../components/dispatch/DispatchStatsBar';
+import DispatchFilterBar from '../components/dispatch/DispatchFilterBar';
+import DispatchOrderCard from '../components/dispatch/DispatchOrderCard';
+import DispatchConfirmModal from '../components/dispatch/DispatchConfirmModal';
+import DispatchCancelModal from '../components/dispatch/DispatchCancelModal';
+import OneTimeOrderModal from '../components/dispatch/OneTimeOrderModal';
+import CustomerProfileModal from '../components/customers/CustomerProfileModal';
+import { EmptyState } from '../components/common/EmptyState';
 
 export const Dispatch = () => {
+  const { 
+    mealOrders, 
+    selectedDate, 
+    markDispatched, 
+    cancelMealOrder 
+  } = useApp();
+
+  const [activeService, setActiveService] = useState('lunch'); // 'lunch' | 'dinner'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'dispatched' | 'cancelled'
+  const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'regular' | 'one_time'
+
+  // Modal States
+  const [confirmOrder, setConfirmOrder] = useState(null);
+  const [cancelOrder, setCancelOrder] = useState(null);
+  const [oneTimeModalOpen, setOneTimeModalOpen] = useState(false);
+  const [profileCustomerId, setProfileCustomerId] = useState(null);
+
+  // Orders for selected date
+  const dateOrders = useMemo(() => {
+    return mealOrders.filter((o) => o.date === selectedDate);
+  }, [mealOrders, selectedDate]);
+
+  // Counts for the tabs
+  const lunchCount = dateOrders.filter((o) => o.mealType === 'lunch').length;
+  const dinnerCount = dateOrders.filter((o) => o.mealType === 'dinner').length;
+
+  // Filtered orders for active view
+  const displayedOrders = useMemo(() => {
+    return dateOrders.filter((o) => {
+      // Service filter
+      if (o.mealType !== activeService) return false;
+
+      // Status filter
+      if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+
+      // Source filter
+      if (sourceFilter !== 'all' && o.source !== sourceFilter) return false;
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = o.customerName.toLowerCase().includes(q);
+        const matchesPhone = o.phone?.includes(q);
+        const matchesAddress = o.address?.toLowerCase().includes(q);
+        if (!matchesName && !matchesPhone && !matchesAddress) return false;
+      }
+
+      return true;
+    });
+  }, [dateOrders, activeService, statusFilter, sourceFilter, searchQuery]);
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-charcoal">Daily Meal Dispatch</h1>
-          <p className="text-sm text-muted-text mt-0.5">
-            Mark daily lunches and dinners dispatched. Single source of truth for monthly billing.
-          </p>
+    <div className="space-y-6 sm:space-y-8 pb-12 antialiased">
+      {/* 1. Header with Date Selector & Quick Booking */}
+      <DispatchHeader onOpenOneTimeOrder={() => setOneTimeModalOpen(true)} />
+
+      {/* 2. Visual Progress & Counts Bar */}
+      <DispatchStatsBar
+        activeService={activeService}
+        orders={dateOrders}
+      />
+
+      {/* 3. Service Tabs (Lunch/Dinner), Search & Status Filter Pills */}
+      <DispatchFilterBar
+        activeService={activeService}
+        setActiveService={setActiveService}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        sourceFilter={sourceFilter}
+        setSourceFilter={setSourceFilter}
+        counts={{ lunch: lunchCount, dinner: dinnerCount }}
+      />
+
+      {/* 4. Kitchen Packing Line (Mobile-first Order Cards) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-xs text-muted-text px-1">
+          <span>
+            Showing <strong>{displayedOrders.length}</strong> orders for {activeService.toUpperCase()} batch
+          </span>
+          <span className="font-medium text-forest hidden sm:inline">
+            Tap "Mark Dispatched" when packed
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="md" iconLeft={Plus}>
-            Add One-Time Order
-          </Button>
-        </div>
+
+        {displayedOrders.length === 0 ? (
+          <EmptyState
+            icon={Truck}
+            title={`No ${activeService} orders found`}
+            description={
+              searchQuery || statusFilter !== 'all' || sourceFilter !== 'all'
+                ? 'Try adjusting your search or filters to see more orders.'
+                : `No meal orders have been scheduled yet for ${activeService} on this date. Click "Check Schedule" in the top bar to auto-generate from weekly customer schedules.`
+            }
+            actionLabel="Book One-Time Order"
+            onAction={() => setOneTimeModalOpen(true)}
+          />
+        ) : (
+          <div className="space-y-3">
+            {displayedOrders.map((order) => (
+              <DispatchOrderCard
+                key={order.id}
+                order={order}
+                onDispatch={(ord) => setConfirmOrder(ord)}
+                onCancel={(ord) => setCancelOrder(ord)}
+                onViewCustomer={(cId) => setProfileCustomerId(cId)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Date selector and Service Tabs */}
-      <Card>
-        <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase text-muted-text">Select Date:</span>
-            <div className="flex items-center gap-2 bg-surface-subtle px-3 py-1.5 rounded-button border border-border text-xs font-medium">
-              <Calendar className="w-3.5 h-3.5 text-forest" />
-              <span>{formatDateIST(new Date(), 'full')}</span>
-            </div>
-          </div>
+      {/* 5. Modals */}
+      <DispatchConfirmModal
+        isOpen={Boolean(confirmOrder)}
+        onClose={() => setConfirmOrder(null)}
+        order={confirmOrder}
+        onConfirm={(orderId) => markDispatched(orderId)}
+      />
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button variant="primary" size="sm">
-              Lunch Service (34)
-            </Button>
-            <Button variant="secondary" size="sm">
-              Dinner Service (30)
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <DispatchCancelModal
+        isOpen={Boolean(cancelOrder)}
+        onClose={() => setCancelOrder(null)}
+        order={cancelOrder}
+        onConfirm={(orderId, reason) => cancelMealOrder(orderId, reason)}
+      />
 
-      {/* Dispatch Cards / Table */}
-      <Table>
-        <TableHead>
-          <TableRow hover={false}>
-            <TableHeader>Customer & Delivery Address</TableHeader>
-            <TableHeader>Meal Details</TableHeader>
-            <TableHeader>Rate</TableHeader>
-            <TableHeader>Special Notes</TableHeader>
-            <TableHeader>Status</TableHeader>
-            <TableHeader align="right">Action</TableHeader>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <TableRow>
-            <TableCell>
-              <p className="font-semibold text-charcoal">Rohan Joshi</p>
-              <p className="text-xs text-muted-text">Flat 402, Green Valley Apts, Sector 14</p>
-            </TableCell>
-            <TableCell>
-              <Badge variant="forest">Lunch (Regular)</Badge>
-            </TableCell>
-            <TableCell className="font-mono">{formatINR(120)}</TableCell>
-            <TableCell className="text-xs text-muted-text">Less spice, 3 rotis</TableCell>
-            <TableCell>
-              <Badge variant="success" dot={true}>Dispatched (12:45 PM)</Badge>
-            </TableCell>
-            <TableCell align="right">
-              <Button variant="ghost" size="sm" disabled={true}>
-                Done
-              </Button>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <p className="font-semibold text-charcoal">Sneha Kulkarni</p>
-              <p className="text-xs text-muted-text">House 12, Lane 3, Model Colony</p>
-            </TableCell>
-            <TableCell>
-              <Badge variant="forest">Lunch (Regular)</Badge>
-            </TableCell>
-            <TableCell className="font-mono">{formatINR(110)}</TableCell>
-            <TableCell className="text-xs text-muted-text">Extra dal</TableCell>
-            <TableCell>
-              <Badge variant="pending" dot={true}>Kitchen Ready</Badge>
-            </TableCell>
-            <TableCell align="right">
-              <Button variant="primary" size="sm" iconLeft={CheckCircle2}>
-                Mark Dispatched
-              </Button>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+      <OneTimeOrderModal
+        isOpen={oneTimeModalOpen}
+        onClose={() => setOneTimeModalOpen(false)}
+      />
+
+      <CustomerProfileModal
+        isOpen={Boolean(profileCustomerId)}
+        onClose={() => setProfileCustomerId(null)}
+        customerId={profileCustomerId}
+        onEdit={() => {}}
+      />
     </div>
   );
 };

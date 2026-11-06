@@ -126,10 +126,13 @@ export const AppProvider = ({ children }) => {
     };
   };
 
-  // Dispatch Actions
+  // DISPATCH MODULE ACTIONS
+
+  // 1. Mark as Dispatched (enforces timestamp, billable eligibility, single dispatch)
   const markDispatched = (orderId) => {
     const order = mealOrders.find((o) => o.id === orderId);
     if (!order) return;
+    if (order.status === 'dispatched') return; // Prevent duplicate dispatch
 
     const timeNow = formatDateIST(new Date(), 'time');
 
@@ -154,6 +157,7 @@ export const AppProvider = ({ children }) => {
     setActivities((prev) => [newActivity, ...prev]);
   };
 
+  // 2. Cancel Meal Order (excluded from billing, preserved for audit)
   const cancelMealOrder = (orderId, reason = 'Customer request') => {
     setMealOrders((prev) =>
       prev.map((o) =>
@@ -164,28 +168,132 @@ export const AppProvider = ({ children }) => {
     );
   };
 
+  // 3. One-Time Order Creation (with duplicate prevention and multi-slot support)
   const addOneTimeOrder = (orderData) => {
-    const newOrder = {
-      ...orderData,
-      id: `order-${Date.now()}`,
-      source: 'one_time',
-      status: 'pending',
-    };
-    setMealOrders((prev) => [newOrder, ...prev]);
+    const slots = Array.isArray(orderData.mealSlots)
+      ? orderData.mealSlots
+      : [orderData.mealType || 'lunch'];
 
-    // Add activity
-    const newActivity = {
-      id: `act-${Date.now()}`,
-      type: 'dispatch',
-      title: 'One-Time Order Created',
-      description: `${newOrder.mealType.toUpperCase()} booked for ${newOrder.customerName} on ${newOrder.date}.`,
-      timestamp: 'Just now',
-      badge: 'One-Time',
-      badgeVariant: 'mint',
-    };
-    setActivities((prev) => [newActivity, ...prev]);
+    const createdOrders = [];
+    const duplicates = [];
 
-    return newOrder;
+    slots.forEach((slot) => {
+      // Duplicate prevention rule: Customer + Date + MealType must be unique
+      const alreadyExists = mealOrders.some(
+        (o) =>
+          o.customerId === orderData.customerId &&
+          o.date === orderData.date &&
+          o.mealType === slot
+      );
+
+      if (alreadyExists) {
+        duplicates.push(slot);
+        return;
+      }
+
+      const price = slot === 'lunch'
+        ? (orderData.lunchPrice || orderData.price)
+        : (orderData.dinnerPrice || orderData.price);
+
+      const newOrder = {
+        id: `order-ot-${Date.now()}-${slot}`,
+        customerId: orderData.customerId,
+        customerName: orderData.customerName,
+        date: orderData.date,
+        mealType: slot,
+        price: Number(price),
+        source: 'one_time',
+        status: 'pending',
+        address: orderData.address,
+        phone: orderData.phone,
+        instructions: orderData.instructions || 'One-time order',
+      };
+      createdOrders.push(newOrder);
+    });
+
+    if (createdOrders.length > 0) {
+      setMealOrders((prev) => [...createdOrders, ...prev]);
+
+      const newActivity = {
+        id: `act-${Date.now()}`,
+        type: 'dispatch',
+        title: 'One-Time Order Booked',
+        description: `${orderData.customerName} booked ${slots.join(' & ')} for ${orderData.date}.`,
+        timestamp: 'Just now',
+        badge: 'One-Time',
+        badgeVariant: 'mint',
+      };
+      setActivities((prev) => [newActivity, ...prev]);
+    }
+
+    return { created: createdOrders, duplicates };
+  };
+
+  // 4. Automatic Scheduled Order Generator (with duplicate check!)
+  const generateDailyScheduledOrders = (dateStr) => {
+    const d = new Date(dateStr);
+    const daysMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const dayOfWeek = daysMap[d.getDay()];
+
+    const activeRegulars = customers.filter(
+      (c) => c.status === 'active' && c.type === 'regular'
+    );
+    const newOrders = [];
+
+    activeRegulars.forEach((cust) => {
+      const daySchedule = cust.schedule?.[dayOfWeek];
+      if (!daySchedule) return;
+
+      // Check lunch
+      if (daySchedule.lunch) {
+        const alreadyExists = mealOrders.some(
+          (o) => o.customerId === cust.id && o.date === dateStr && o.mealType === 'lunch'
+        );
+        if (!alreadyExists) {
+          newOrders.push({
+            id: `order-gen-${cust.id}-lunch-${dateStr}`,
+            customerId: cust.id,
+            customerName: cust.name,
+            date: dateStr,
+            mealType: 'lunch',
+            price: cust.lunchPrice,
+            source: 'regular',
+            status: 'pending',
+            instructions: cust.instructions || '',
+            address: cust.address,
+            phone: cust.phone,
+          });
+        }
+      }
+
+      // Check dinner
+      if (daySchedule.dinner) {
+        const alreadyExists = mealOrders.some(
+          (o) => o.customerId === cust.id && o.date === dateStr && o.mealType === 'dinner'
+        );
+        if (!alreadyExists) {
+          newOrders.push({
+            id: `order-gen-${cust.id}-dinner-${dateStr}`,
+            customerId: cust.id,
+            customerName: cust.name,
+            date: dateStr,
+            mealType: 'dinner',
+            price: cust.dinnerPrice,
+            source: 'regular',
+            status: 'pending',
+            instructions: cust.instructions || '',
+            address: cust.address,
+            phone: cust.phone,
+          });
+        }
+      }
+    });
+
+    if (newOrders.length > 0) {
+      setMealOrders((prev) => [...prev, ...newOrders]);
+      return newOrders.length;
+    }
+    return 0;
   };
 
   // Expense Actions
@@ -262,13 +370,14 @@ export const AppProvider = ({ children }) => {
     const regularCustCount = customers.filter((c) => c.type === 'regular' && c.status === 'active').length;
     const occasionalCustCount = customers.filter((c) => c.type === 'occasional' && c.status === 'active').length;
 
-    // Today's meal stats
+    // Selected date meal stats
     const todayOrders = mealOrders.filter((o) => o.date === selectedDate);
     const expectedToday = todayOrders.length;
     const dispatchedToday = todayOrders.filter((o) => o.status === 'dispatched').length;
     const pendingToday = todayOrders.filter((o) => o.status === 'pending').length;
+    const cancelledToday = todayOrders.filter((o) => o.status === 'cancelled').length;
 
-    // Lunch vs Dinner today
+    // Lunch vs Dinner
     const lunchOrders = todayOrders.filter((o) => o.mealType === 'lunch');
     const dinnerOrders = todayOrders.filter((o) => o.mealType === 'dinner');
 
@@ -295,6 +404,7 @@ export const AppProvider = ({ children }) => {
       expectedToday,
       dispatchedToday,
       pendingToday,
+      cancelledToday,
       lunchOrders,
       dinnerOrders,
       lunchDispatched,
@@ -327,6 +437,7 @@ export const AppProvider = ({ children }) => {
     markDispatched,
     cancelMealOrder,
     addOneTimeOrder,
+    generateDailyScheduledOrders,
     addExpense,
     deleteExpense,
     recordPayment,
