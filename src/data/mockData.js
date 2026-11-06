@@ -568,12 +568,21 @@ export const INITIAL_INVOICES = [
     invoiceNumber: 'INV-2026-11-001',
     customerId: 'cust-1',
     customerName: 'Rajesh Agrawal',
-    period: '01 Nov 2026 - 30 Nov 2026',
+    customerPhone: '+91 98260 11422',
+    customerAddress: 'Flat 402, Shalimar Palms, Pipliyahana, Indore',
+    period: '01 Nov 2026 – 30 Nov 2026',
+    lineItems: [
+      { description: 'Lunch Service (Regular Dabba)', unitPrice: 120, quantity: 24, total: 2880 },
+      { description: 'Dinner Service (Regular Dabba)', unitPrice: 130, quantity: 24, total: 3120 },
+    ],
     totalAmount: 6000,
     paidAmount: 6000,
     balanceDue: 0,
     status: 'paid',
     mealCount: 48,
+    payments: [
+      { id: 'pay-1', amount: 6000, date: '2026-11-04', paymentMethod: 'UPI', notes: 'Google Pay ref #99824' }
+    ],
     createdAt: '2026-11-01',
   },
   {
@@ -581,12 +590,20 @@ export const INITIAL_INVOICES = [
     invoiceNumber: 'INV-2026-11-002',
     customerId: 'cust-2',
     customerName: 'Ananya Mehta',
-    period: '01 Nov 2026 - 30 Nov 2026',
+    customerPhone: '+91 98931 77201',
+    customerAddress: 'B-14, Silver Springs, AB Bypass Road, Indore',
+    period: '01 Nov 2026 – 30 Nov 2026',
+    lineItems: [
+      { description: 'Lunch Service (Office Delivery)', unitPrice: 110, quantity: 24, total: 2640 },
+    ],
     totalAmount: 2640,
     paidAmount: 1500,
     balanceDue: 1140,
     status: 'partially_paid',
     mealCount: 24,
+    payments: [
+      { id: 'pay-2', amount: 1500, date: '2026-11-05', paymentMethod: 'UPI', notes: 'PhonePe partial payment' }
+    ],
     createdAt: '2026-11-01',
   },
   {
@@ -594,12 +611,20 @@ export const INITIAL_INVOICES = [
     invoiceNumber: 'INV-2026-11-003',
     customerId: 'cust-3',
     customerName: 'Rohan Joshi',
-    period: '01 Nov 2026 - 30 Nov 2026',
+    customerPhone: '+91 97555 43219',
+    customerAddress: 'Flat 201, Royal Amar Heights, Vijay Nagar, Indore',
+    period: '01 Nov 2026 – 30 Nov 2026',
+    lineItems: [
+      { description: 'Lunch Service (Regular Dabba)', unitPrice: 120, quantity: 24, total: 2880 },
+      { description: 'Dinner Service (Regular Dabba)', unitPrice: 130, quantity: 24, total: 3120 },
+      { description: 'Weekend Special Extra Lunch', unitPrice: 120, quantity: 2, total: 240 },
+    ],
     totalAmount: 6240,
     paidAmount: 0,
     balanceDue: 6240,
     status: 'unpaid',
     mealCount: 50,
+    payments: [],
     createdAt: '2026-11-01',
   },
   {
@@ -607,12 +632,21 @@ export const INITIAL_INVOICES = [
     invoiceNumber: 'INV-2026-11-004',
     customerId: 'cust-7',
     customerName: 'Dr. Anirudh Sen',
-    period: '01 Nov 2026 - 30 Nov 2026',
+    customerPhone: '+91 98930 66721',
+    customerAddress: 'Staff Quarters Q-7, CHL Hospital Campus, AB Road, Indore',
+    period: '01 Nov 2026 – 30 Nov 2026',
+    lineItems: [
+      { description: 'Lunch Service (Diabetic Meal)', unitPrice: 130, quantity: 24, total: 3120 },
+      { description: 'Dinner Service (Diabetic Meal)', unitPrice: 140, quantity: 24, total: 3360 },
+    ],
     totalAmount: 6480,
     paidAmount: 6480,
     balanceDue: 0,
     status: 'paid',
     mealCount: 48,
+    payments: [
+      { id: 'pay-3', amount: 6480, date: '2026-11-03', paymentMethod: 'Bank Transfer', notes: 'NEFT reference #7712' }
+    ],
     createdAt: '2026-11-01',
   },
 ];

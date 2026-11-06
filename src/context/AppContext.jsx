@@ -326,19 +326,154 @@ export const AppProvider = ({ children }) => {
   };
 
   // Invoicing & Payment Actions
+
+  // 1. Generate Individual Invoice for a Customer
+  const generateCustomerInvoice = (customerId, period = '01 Nov 2026 – 30 Nov 2026') => {
+    const customer = customers.find((c) => c.id === customerId);
+    if (!customer) throw new Error('Customer not found');
+
+    // Duplicate Invoice Check
+    const alreadyExists = invoices.some(
+      (inv) => inv.customerId === customerId && inv.period === period
+    );
+    if (alreadyExists) {
+      throw new Error(`Invoice for ${customer.name} for ${period} already exists.`);
+    }
+
+    // Filter strictly dispatched meals for this customer
+    const dispatchedMeals = mealOrders.filter(
+      (o) => o.customerId === customerId && o.status === 'dispatched'
+    );
+
+    // Group meals into line items by (mealType + price) to preserve separate line items for historical price changes!
+    const lineItemMap = {};
+    dispatchedMeals.forEach((meal) => {
+      const key = `${meal.mealType}-${meal.price}`;
+      if (!lineItemMap[key]) {
+        lineItemMap[key] = {
+          description: `${meal.mealType.toUpperCase()} Service (${meal.source === 'one_time' ? 'One-Time' : 'Regular Subscription'})`,
+          unitPrice: Number(meal.price),
+          quantity: 0,
+          total: 0,
+        };
+      }
+      lineItemMap[key].quantity += 1;
+      lineItemMap[key].total += Number(meal.price);
+    });
+
+    // If no current live orders yet, generate standard scheduled monthly line items based on agreement
+    let lineItems = Object.values(lineItemMap);
+    if (lineItems.length === 0) {
+      const lunchCount = customer.schedule?.mon?.lunch ? 24 : 0;
+      const dinnerCount = customer.schedule?.mon?.dinner ? 24 : 0;
+      
+      if (lunchCount > 0) {
+        lineItems.push({
+          description: 'Lunch Service (Regular Dabba)',
+          unitPrice: customer.lunchPrice,
+          quantity: lunchCount,
+          total: lunchCount * customer.lunchPrice,
+        });
+      }
+      if (dinnerCount > 0) {
+        lineItems.push({
+          description: 'Dinner Service (Regular Dabba)',
+          unitPrice: customer.dinnerPrice,
+          quantity: dinnerCount,
+          total: dinnerCount * customer.dinnerPrice,
+        });
+      }
+    }
+
+    const totalAmount = lineItems.reduce((sum, item) => sum + item.total, 0);
+    const mealCount = lineItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    const newInvoice = {
+      id: `inv-${Date.now()}`,
+      invoiceNumber: `INV-2026-11-${String(invoices.length + 1).padStart(3, '0')}`,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      customerAddress: customer.address,
+      period,
+      lineItems,
+      totalAmount,
+      paidAmount: 0,
+      balanceDue: totalAmount,
+      status: 'unpaid',
+      mealCount,
+      payments: [],
+      createdAt: getTodayIST(),
+    };
+
+    setInvoices((prev) => [newInvoice, ...prev]);
+
+    // Activity log
+    const newActivity = {
+      id: `act-${Date.now()}`,
+      type: 'payment',
+      title: 'Invoice Issued',
+      description: `${newInvoice.invoiceNumber} generated for ${customer.name} (Total: ₹${totalAmount}).`,
+      timestamp: 'Just now',
+      amount: totalAmount,
+      badge: 'Invoice',
+      badgeVariant: 'forest',
+    };
+    setActivities((prev) => [newActivity, ...prev]);
+
+    return newInvoice;
+  };
+
+  // 2. Generate Bulk Invoices for All Active Customers
+  const generateBulkInvoices = (period = '01 Nov 2026 – 30 Nov 2026') => {
+    let generatedCount = 0;
+    const activeCustomers = customers.filter((c) => c.status === 'active');
+
+    activeCustomers.forEach((c) => {
+      const alreadyHas = invoices.some(
+        (inv) => inv.customerId === c.id && inv.period === period
+      );
+      if (!alreadyHas) {
+        try {
+          generateCustomerInvoice(c.id, period);
+          generatedCount += 1;
+        } catch (e) {
+          // ignore already existing
+        }
+      }
+    });
+
+    return generatedCount;
+  };
+
+  // 3. Record Payment (supports partial payments)
   const recordPayment = (invoiceId, amount, paymentMethod = 'UPI', notes = '') => {
+    const numericAmount = Number(amount);
+    if (!numericAmount || numericAmount <= 0) return;
+
+    const paymentDate = getTodayIST();
+
     setInvoices((prev) =>
       prev.map((inv) => {
         if (inv.id === invoiceId) {
-          const newPaid = Number(inv.paidAmount) + Number(amount);
+          const newPaid = Number(inv.paidAmount) + numericAmount;
           const newBalance = Math.max(0, Number(inv.totalAmount) - newPaid);
           const newStatus = newBalance === 0 ? 'paid' : 'partially_paid';
+
+          const newPaymentRecord = {
+            id: `pay-${Date.now()}`,
+            amount: numericAmount,
+            date: paymentDate,
+            paymentMethod,
+            notes,
+          };
 
           return {
             ...inv,
             paidAmount: newPaid,
             balanceDue: newBalance,
             status: newStatus,
+            payments: [...(inv.payments || []), newPaymentRecord],
           };
         }
         return inv;
@@ -351,10 +486,10 @@ export const AppProvider = ({ children }) => {
         id: `act-${Date.now()}`,
         type: 'payment',
         title: 'Payment Received',
-        description: `Received ₹${amount} from ${inv.customerName} via ${paymentMethod}.`,
+        description: `Received ₹${numericAmount} from ${inv.customerName} via ${paymentMethod}.`,
         timestamp: 'Just now',
-        amount: Number(amount),
-        badge: 'Payment',
+        amount: numericAmount,
+        badge: 'Paid',
         badgeVariant: 'success',
       };
       setActivities((prev) => [newActivity, ...prev]);
@@ -441,6 +576,8 @@ export const AppProvider = ({ children }) => {
     addExpense,
     deleteExpense,
     recordPayment,
+    generateCustomerInvoice,
+    generateBulkInvoices,
     metrics,
   };
 
