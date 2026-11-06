@@ -4,7 +4,8 @@ import {
   INITIAL_MEAL_ORDERS, 
   INITIAL_EXPENSES, 
   INITIAL_INVOICES, 
-  INITIAL_ACTIVITIES 
+  INITIAL_ACTIVITIES,
+  INITIAL_SETTINGS,
 } from '../data/mockData';
 import { getTodayIST, formatDateIST } from '../utils/date';
 
@@ -16,8 +17,14 @@ export const AppProvider = ({ children }) => {
   const [expenses, setExpenses] = useState(INITIAL_EXPENSES);
   const [invoices, setInvoices] = useState(INITIAL_INVOICES);
   const [activities, setActivities] = useState(INITIAL_ACTIVITIES);
+  const [settings, setSettings] = useState(INITIAL_SETTINGS);
   const [activeModal, setActiveModal] = useState(null); // 'addCustomer' | 'addOrder' | 'generateBills' | 'addExpense' | null
   const [selectedDate, setSelectedDate] = useState('2026-11-06');
+
+  // Business Settings Action
+  const updateSettings = (newSettings) => {
+    setSettings((prev) => ({ ...prev, ...newSettings }));
+  };
 
   // Customer Management Actions
   const addCustomer = (customerData) => {
@@ -585,6 +592,8 @@ export const AppProvider = ({ children }) => {
     recordPayment,
     generateCustomerInvoice,
     generateBulkInvoices,
+    settings,
+    updateSettings,
     metrics,
   };
 

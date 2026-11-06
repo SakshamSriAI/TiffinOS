@@ -701,3 +701,28 @@ export const INITIAL_ACTIVITIES = [
     badgeVariant: 'pending',
   },
 ];
+
+export const INITIAL_SETTINGS = {
+  businessName: 'Shree Annapurna Tiffin Service',
+  ownerName: 'Saksham Srivastava',
+  phone: '+91 98260 55432',
+  whatsappNumber: '+91 98260 55432',
+  upiId: 'annapurnatiffin@okaxis',
+  address: 'Plot 44, Kailash Nagar, Near Gita Bhawan Square, Indore, Madhya Pradesh 452001',
+  defaultLunchPrice: 110,
+  defaultDinnerPrice: 120,
+  lunchCutoff: '11:00 AM',
+  dinnerCutoff: '06:30 PM',
+  operatingDays: {
+    mon: true,
+    tue: true,
+    wed: true,
+    thu: true,
+    fri: true,
+    sat: true,
+    sun: false,
+  },
+  currency: 'INR (₹)',
+  timezone: 'Asia/Kolkata (IST)',
+  dateFormat: 'DD/MM/YYYY',
+};
