@@ -265,41 +265,45 @@ export const AppProvider = ({ children }) => {
 
   // Business Settings Action
   const updateSettings = async (newSettings) => {
+    setSettings((prev) => ({ ...prev, ...newSettings }));
+
     if (liveMode && supabase) {
       try {
         // Fetch existing operating_days to preserve master_passcode
         const { data: currentRec } = await supabase
           .from('business_settings')
-          .select('operating_days')
+          .select('id, operating_days')
           .limit(1)
           .single();
 
-        const currentPasscode = currentRec?.operating_days?.master_passcode || localStorage.getItem('tiffinos_master_passcode') || '1234';
+        const activePasscode = localStorage.getItem('tiffinos_master_passcode') || currentRec?.operating_days?.master_passcode || '1234';
         const mergedOperatingDays = newSettings.operatingDays
-          ? { ...newSettings.operatingDays, master_passcode: currentPasscode }
-          : currentRec?.operating_days;
+          ? { ...newSettings.operatingDays, master_passcode: activePasscode }
+          : (currentRec?.operating_days || { master_passcode: activePasscode });
 
-        await supabase
-          .from('business_settings')
-          .update({
-            business_name: newSettings.businessName,
-            owner_name: newSettings.ownerName,
-            phone: newSettings.phone,
-            whatsapp_number: newSettings.whatsappNumber,
-            upi_id: newSettings.upiId,
-            address: newSettings.address,
-            default_lunch_price: newSettings.defaultLunchPrice,
-            default_dinner_price: newSettings.defaultDinnerPrice,
-            lunch_cutoff: newSettings.lunchCutoff,
-            dinner_cutoff: newSettings.dinnerCutoff,
-            operating_days: mergedOperatingDays,
-          })
-          .neq('id', '00000000-0000-0000-0000-000000000000');
+        const payload = {
+          business_name: newSettings.businessName,
+          owner_name: newSettings.ownerName,
+          phone: newSettings.phone,
+          whatsapp_number: newSettings.whatsappNumber,
+          upi_id: newSettings.upiId,
+          address: newSettings.address,
+          default_lunch_price: newSettings.defaultLunchPrice,
+          default_dinner_price: newSettings.defaultDinnerPrice,
+          lunch_cutoff: newSettings.lunchCutoff,
+          dinner_cutoff: newSettings.dinnerCutoff,
+          operating_days: mergedOperatingDays,
+        };
+
+        if (currentRec?.id) {
+          await supabase.from('business_settings').update(payload).eq('id', currentRec.id);
+        } else {
+          await supabase.from('business_settings').update(payload).neq('id', '00000000-0000-0000-0000-000000000000');
+        }
       } catch (e) {
         console.error('Failed to update settings in Supabase:', e);
       }
     }
-    setSettings((prev) => ({ ...prev, ...newSettings }));
   };
 
   // Customer Management Actions

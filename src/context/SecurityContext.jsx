@@ -92,15 +92,9 @@ export const SecurityProvider = ({ children }) => {
     const cleanEntered = String(enteredPin || '').trim();
     const storedPin = String(localStorage.getItem(STORAGE_KEY_PASSCODE) || '').trim();
     const activePasscode = String(passcode || '').trim();
+    const effectivePasscode = storedPin || activePasscode || '1234';
 
-    // Check against fresh localStorage, state passcode, or fallback '1234'
-    const isMatch = 
-      (cleanEntered && cleanEntered === storedPin) ||
-      (cleanEntered && cleanEntered === activePasscode) ||
-      (!storedPin && !activePasscode && cleanEntered === '1234') ||
-      (cleanEntered === '1234' && (!storedPin || storedPin === '1234'));
-
-    if (isMatch) {
+    if (cleanEntered && cleanEntered === effectivePasscode) {
       sessionStorage.setItem(STORAGE_KEY_SESSION, 'true');
       setIsLocked(false);
       resetInactivityTimer();
@@ -149,10 +143,17 @@ export const SecurityProvider = ({ children }) => {
         const existingDays = currentSettings?.operating_days || {};
         const updatedDays = { ...existingDays, master_passcode: cleanNew };
 
-        await supabase
-          .from('business_settings')
-          .update({ operating_days: updatedDays })
-          .neq('id', '00000000-0000-0000-0000-000000000000');
+        if (currentSettings?.id) {
+          await supabase
+            .from('business_settings')
+            .update({ operating_days: updatedDays })
+            .eq('id', currentSettings.id);
+        } else {
+          await supabase
+            .from('business_settings')
+            .update({ operating_days: updatedDays })
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+        }
       } catch (err) {
         console.error('Failed to sync master passcode to Supabase:', err);
       }

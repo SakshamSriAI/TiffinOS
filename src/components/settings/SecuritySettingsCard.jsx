@@ -26,7 +26,9 @@ export const SecuritySettingsCard = () => {
   const [showPins, setShowPins] = useState(false);
 
   const handlePinSubmit = async (e) => {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     setStatusMessage(null);
 
     const cleanNew = newPin.trim();
@@ -167,7 +169,7 @@ export const SecuritySettingsCard = () => {
               </Button>
             </div>
           ) : (
-            <form onSubmit={handlePinSubmit} className="space-y-3 p-4 bg-surface-subtle rounded-card border border-border">
+            <div className="space-y-3 p-4 bg-surface-subtle rounded-card border border-border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <KeyRound className="w-4 h-4 text-forest" />
@@ -199,6 +201,7 @@ export const SecuritySettingsCard = () => {
                   maxLength={6}
                   value={currentPin}
                   onChange={(e) => setCurrentPin(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handlePinSubmit(e); }}
                   autoComplete="current-password"
                 />
                 <Input
@@ -207,6 +210,7 @@ export const SecuritySettingsCard = () => {
                   maxLength={6}
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handlePinSubmit(e); }}
                   required
                   autoComplete="new-password"
                 />
@@ -216,6 +220,7 @@ export const SecuritySettingsCard = () => {
                   maxLength={6}
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handlePinSubmit(e); }}
                   required
                   autoComplete="new-password"
                 />
@@ -229,12 +234,12 @@ export const SecuritySettingsCard = () => {
                   <Button type="button" variant="ghost" size="sm" onClick={() => setIsChangingPin(false)} disabled={isSubmitting}>
                     Cancel
                   </Button>
-                  <Button type="submit" variant="primary" size="sm" disabled={isSubmitting}>
+                  <Button type="button" variant="primary" size="sm" onClick={handlePinSubmit} disabled={isSubmitting}>
                     {isSubmitting ? 'Saving...' : 'Save Passcode'}
                   </Button>
                 </div>
               </div>
-            </form>
+            </div>
           )}
         </div>
 

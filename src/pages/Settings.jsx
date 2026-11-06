@@ -345,92 +345,7 @@ export const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* 4. Regional & Currency Standards */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-forest" />
-              <CardTitle>Regional Standards & Compliance</CardTitle>
-            </div>
-            <CardDescription>
-              Locked to Indian business standards (Asia/Kolkata timezone & INR currency).
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-            <div className="p-3 bg-surface-subtle rounded border border-border">
-              <span className="text-xs font-semibold text-muted-text uppercase block">Currency Standard</span>
-              <p className="font-semibold text-charcoal mt-1">Indian Rupee (INR ₹)</p>
-              <Badge variant="mint" className="mt-2">Active</Badge>
-            </div>
-            <div className="p-3 bg-surface-subtle rounded border border-border">
-              <span className="text-xs font-semibold text-muted-text uppercase block">Local Timezone</span>
-              <p className="font-semibold text-charcoal mt-1">Asia/Kolkata (IST +5:30)</p>
-              <Badge variant="mint" className="mt-2">Active</Badge>
-            </div>
-            <div className="p-3 bg-surface-subtle rounded border border-border">
-              <span className="text-xs font-semibold text-muted-text uppercase block">Date Format</span>
-              <p className="font-semibold text-charcoal mt-1">DD/MM/YYYY (Indian Standard)</p>
-              <Badge variant="mint" className="mt-2">Active</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 5. Business Security, Master Passcode & Privacy */}
-        <SecuritySettingsCard />
-
-        {/* 6. Supabase Backend Architecture & Connection Status */}
-        <DatabaseConnectionStatus />
-
-        {/* 7. Data Management & Local Backup */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Download className="w-4 h-4 text-forest" />
-              <CardTitle>Data Management & System Backup</CardTitle>
-            </div>
-            <CardDescription>
-              Export full state or review live record tallies.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-3 bg-surface-subtle rounded border border-border">
-                <span className="text-xs text-muted-text block">Customers</span>
-                <span className="text-lg font-bold text-charcoal font-mono">{customers.length}</span>
-              </div>
-              <div className="p-3 bg-surface-subtle rounded border border-border">
-                <span className="text-xs text-muted-text block">Meal Dispatches</span>
-                <span className="text-lg font-bold text-charcoal font-mono">{mealOrders.length}</span>
-              </div>
-              <div className="p-3 bg-surface-subtle rounded border border-border">
-                <span className="text-xs text-muted-text block">Expenses</span>
-                <span className="text-lg font-bold text-charcoal font-mono">{expenses.length}</span>
-              </div>
-              <div className="p-3 bg-surface-subtle rounded border border-border">
-                <span className="text-xs text-muted-text block">Invoices</span>
-                <span className="text-lg font-bold text-charcoal font-mono">{invoices.length}</span>
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-charcoal">Complete Business Backup</p>
-                <p className="text-[11px] text-muted-text">Download all customers, dispatch history, expenses, and invoices as a JSON file.</p>
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                iconLeft={Download}
-                onClick={handleExportBackup}
-              >
-                Download JSON Backup
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sticky Save Bar */}
+        {/* Sticky Save Bar for Business Settings & Rates */}
         <div className="sticky bottom-4 z-10 bg-white/95 backdrop-blur p-4 rounded-card border border-border shadow-modal flex items-center justify-between">
           <span className="text-xs text-muted-text">
             Ensure business phone and UPI ID are kept up to date for customer payments.
@@ -440,11 +355,96 @@ export const Settings = () => {
             variant="primary"
             iconLeft={Save}
           >
-            Save All Settings
+            Save Business Profile & Rates
           </Button>
         </div>
 
       </form>
+
+      {/* 4. Regional & Currency Standards */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-forest" />
+            <CardTitle>Regional Standards & Compliance</CardTitle>
+          </div>
+          <CardDescription>
+            Locked to Indian business standards (Asia/Kolkata timezone & INR currency).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+          <div className="p-3 bg-surface-subtle rounded border border-border">
+            <span className="text-xs font-semibold text-muted-text uppercase block">Currency Standard</span>
+            <p className="font-semibold text-charcoal mt-1">Indian Rupee (INR ₹)</p>
+            <Badge variant="mint" className="mt-2">Active</Badge>
+          </div>
+          <div className="p-3 bg-surface-subtle rounded border border-border">
+            <span className="text-xs font-semibold text-muted-text uppercase block">Local Timezone</span>
+            <p className="font-semibold text-charcoal mt-1">Asia/Kolkata (IST +5:30)</p>
+            <Badge variant="mint" className="mt-2">Active</Badge>
+          </div>
+          <div className="p-3 bg-surface-subtle rounded border border-border">
+            <span className="text-xs font-semibold text-muted-text uppercase block">Date Format</span>
+            <p className="font-semibold text-charcoal mt-1">DD/MM/YYYY (Indian Standard)</p>
+            <Badge variant="mint" className="mt-2">Active</Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 5. Business Security, Master Passcode & Privacy (Standalone Component) */}
+      <SecuritySettingsCard />
+
+      {/* 6. Supabase Backend Architecture & Connection Status */}
+      <DatabaseConnectionStatus />
+
+      {/* 7. Data Management & Local Backup */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Download className="w-4 h-4 text-forest" />
+            <CardTitle>Data Management & System Backup</CardTitle>
+          </div>
+          <CardDescription>
+            Export full state or review live record tallies.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="p-3 bg-surface-subtle rounded border border-border">
+              <span className="text-xs text-muted-text block">Customers</span>
+              <span className="text-lg font-bold text-charcoal font-mono">{customers.length}</span>
+            </div>
+            <div className="p-3 bg-surface-subtle rounded border border-border">
+              <span className="text-xs text-muted-text block">Meal Dispatches</span>
+              <span className="text-lg font-bold text-charcoal font-mono">{mealOrders.length}</span>
+            </div>
+            <div className="p-3 bg-surface-subtle rounded border border-border">
+              <span className="text-xs text-muted-text block">Expenses</span>
+              <span className="text-lg font-bold text-charcoal font-mono">{expenses.length}</span>
+            </div>
+            <div className="p-3 bg-surface-subtle rounded border border-border">
+              <span className="text-xs text-muted-text block">Invoices</span>
+              <span className="text-lg font-bold text-charcoal font-mono">{invoices.length}</span>
+            </div>
+          </div>
+
+          <div className="pt-2 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-charcoal">Complete Business Backup</p>
+              <p className="text-[11px] text-muted-text">Download all customers, dispatch history, expenses, and invoices as a JSON file.</p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              iconLeft={Download}
+              onClick={handleExportBackup}
+            >
+              Download JSON Backup
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
