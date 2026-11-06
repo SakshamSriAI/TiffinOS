@@ -575,22 +575,258 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const pauseCustomer = (id, reason = 'Paused by owner') => {
+  const pauseCustomer = async (id, reason = 'Paused by owner') => {
+    if (liveMode && supabase) {
+      try {
+        await supabase
+          .from('customers')
+          .update({ status: 'paused' })
+          .eq('id', id);
+      } catch (e) {
+        console.error('Failed to pause customer in Supabase:', e);
+      }
+    }
+
     setCustomers((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: 'paused', instructions: `${c.instructions || ''} [Paused: ${reason}]`.trim() } : c))
     );
+
+    const cust = customers.find((c) => c.id === id);
+    if (cust) {
+      const newActivity = {
+        id: `act-${Date.now()}`,
+        type: 'customer',
+        title: 'Customer Paused',
+        description: `${cust.name} subscriptions paused temporarily.`,
+        timestamp: 'Just now',
+        badge: 'Paused',
+        badgeVariant: 'amber',
+      };
+      setActivities((prev) => [newActivity, ...prev]);
+    }
   };
 
-  const reactivateCustomer = (id) => {
+  const reactivateCustomer = async (id) => {
+    if (liveMode && supabase) {
+      try {
+        await supabase
+          .from('customers')
+          .update({ status: 'active' })
+          .eq('id', id);
+      } catch (e) {
+        console.error('Failed to reactivate customer in Supabase:', e);
+      }
+    }
+
     setCustomers((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: 'active' } : c))
     );
+
+    const cust = customers.find((c) => c.id === id);
+    if (cust) {
+      // Sync today's meals if regular
+      if (cust.type === 'regular') {
+        const todayStr = selectedDate || getTodayIST();
+        const todayDay = getDayOfWeekKey(todayStr);
+        const wantsLunch = isMealScheduledForDay(cust.schedule, todayDay, 'lunch');
+        const wantsDinner = isMealScheduledForDay(cust.schedule, todayDay, 'dinner');
+
+        const hasLunch = mealOrders.some(
+          (o) => o.customerId === id && o.date === todayStr && o.mealType === 'lunch'
+        );
+        const hasDinner = mealOrders.some(
+          (o) => o.customerId === id && o.date === todayStr && o.mealType === 'dinner'
+        );
+
+        const newOrders = [];
+        if (wantsLunch && !hasLunch) {
+          newOrders.push({
+            customerId: id,
+            customerName: cust.name,
+            phone: cust.phone,
+            address: cust.address,
+            date: todayStr,
+            mealType: 'lunch',
+            price: Number(cust.lunchPrice) || 120,
+            source: 'regular',
+            status: 'pending',
+            instructions: cust.instructions || '',
+          });
+        }
+        if (wantsDinner && !hasDinner) {
+          newOrders.push({
+            customerId: id,
+            customerName: cust.name,
+            phone: cust.phone,
+            address: cust.address,
+            date: todayStr,
+            mealType: 'dinner',
+            price: Number(cust.dinnerPrice) || 130,
+            source: 'regular',
+            status: 'pending',
+            instructions: cust.instructions || '',
+          });
+        }
+
+        if (newOrders.length > 0) {
+          if (liveMode && supabase) {
+            try {
+              const dbPayload = newOrders.map((o) => ({
+                customer_id: o.customerId,
+                date: o.date,
+                meal_type: o.mealType,
+                price: o.price,
+                source: o.source,
+                status: o.status,
+                instructions: o.instructions,
+              }));
+              const { data: dbOrders } = await supabase
+                .from('meal_orders')
+                .insert(dbPayload)
+                .select('*, customers(name, phone, address)');
+              if (dbOrders) {
+                const formatted = dbOrders.map((o) => ({
+                  id: o.id,
+                  customerId: o.customer_id,
+                  customerName: o.customers?.name || cust.name,
+                  phone: o.customers?.phone || cust.phone,
+                  address: o.customers?.address || cust.address,
+                  date: o.date,
+                  mealType: o.meal_type,
+                  price: Number(o.price),
+                  source: o.source,
+                  status: o.status,
+                  dispatchedAt: o.dispatched_at,
+                  instructions: o.instructions || '',
+                }));
+                setMealOrders((prev) => [...formatted, ...prev]);
+              }
+            } catch (e) {
+              console.error('Error syncing reactivated customer orders in Supabase:', e);
+            }
+          } else {
+            const withIds = newOrders.map((o) => ({
+              ...o,
+              id: `order-gen-${o.customerId}-${o.mealType}-${o.date}`,
+            }));
+            setMealOrders((prev) => [...withIds, ...prev]);
+          }
+        }
+      }
+
+      const newActivity = {
+        id: `act-${Date.now()}`,
+        type: 'customer',
+        title: 'Customer Reactivated',
+        description: `${cust.name} restored to active meal deliveries.`,
+        timestamp: 'Just now',
+        badge: 'Active',
+        badgeVariant: 'forest',
+      };
+      setActivities((prev) => [newActivity, ...prev]);
+    }
   };
 
-  const archiveCustomer = (id) => {
+  const archiveCustomer = async (id, reason = 'Archived') => {
+    if (liveMode && supabase) {
+      try {
+        await supabase
+          .from('customers')
+          .update({ status: 'archived' })
+          .eq('id', id);
+        
+        // Cancel pending meals for this customer
+        await supabase
+          .from('meal_orders')
+          .update({ status: 'cancelled', instructions: 'Cancelled due to customer archive' })
+          .eq('customer_id', id)
+          .eq('status', 'pending');
+      } catch (e) {
+        console.error('Failed to archive customer in Supabase:', e);
+      }
+    }
+
     setCustomers((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: 'archived' } : c))
     );
+
+    // Cancel pending orders in state
+    setMealOrders((prev) =>
+      prev.map((o) =>
+        o.customerId === id && o.status === 'pending'
+          ? { ...o, status: 'cancelled', instructions: 'Cancelled due to customer archive' }
+          : o
+      )
+    );
+
+    const cust = customers.find((c) => c.id === id);
+    if (cust) {
+      const newActivity = {
+        id: `act-${Date.now()}`,
+        type: 'customer',
+        title: 'Customer Archived',
+        description: `${cust.name} has been archived.`,
+        timestamp: 'Just now',
+        badge: 'Archived',
+        badgeVariant: 'neutral',
+      };
+      setActivities((prev) => [newActivity, ...prev]);
+    }
+  };
+
+  const unarchiveCustomer = async (id) => {
+    await reactivateCustomer(id);
+
+    const cust = customers.find((c) => c.id === id);
+    if (cust) {
+      const newActivity = {
+        id: `act-${Date.now()}`,
+        type: 'customer',
+        title: 'Customer Unarchived',
+        description: `${cust.name} restored from archive to active status.`,
+        timestamp: 'Just now',
+        badge: 'Restored',
+        badgeVariant: 'forest',
+      };
+      setActivities((prev) => [newActivity, ...prev]);
+    }
+  };
+
+  const deleteCustomer = async (id) => {
+    const cust = customers.find((c) => c.id === id);
+
+    if (liveMode && supabase) {
+      try {
+        const { error } = await supabase
+          .from('customers')
+          .delete()
+          .eq('id', id);
+        if (error) {
+          console.error('Failed to delete customer in Supabase:', error);
+          throw error;
+        }
+      } catch (e) {
+        console.error('Error deleting customer from Supabase:', e);
+      }
+    }
+
+    // Cascade delete in client state
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
+    setMealOrders((prev) => prev.filter((o) => o.customerId !== id));
+    setInvoices((prev) => prev.filter((i) => i.customerId !== id));
+
+    const newActivity = {
+      id: `act-${Date.now()}`,
+      type: 'customer',
+      title: 'Customer Deleted',
+      description: `${cust ? cust.name : 'Customer'} and associated records were permanently removed.`,
+      timestamp: 'Just now',
+      badge: 'Deleted',
+      badgeVariant: 'amber',
+    };
+    setActivities((prev) => [newActivity, ...prev]);
+
+    return { success: true };
   };
 
   const toggleCustomerStatus = (id) => {
@@ -1225,6 +1461,8 @@ export const AppProvider = ({ children }) => {
     pauseCustomer,
     reactivateCustomer,
     archiveCustomer,
+    unarchiveCustomer,
+    deleteCustomer,
     toggleCustomerStatus,
     getCustomerProfileData,
     markDispatched,

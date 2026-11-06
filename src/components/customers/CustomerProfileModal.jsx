@@ -11,6 +11,9 @@ import {
   PauseCircle, 
   PlayCircle,
   Archive,
+  ArchiveRestore,
+  Trash2,
+  AlertTriangle,
   Edit,
   History,
   AlertCircle
@@ -42,10 +45,27 @@ export const CustomerProfileModal = ({
     getCustomerProfileData, 
     pauseCustomer, 
     reactivateCustomer, 
-    archiveCustomer 
+    archiveCustomer,
+    unarchiveCustomer,
+    deleteCustomer 
   } = useApp();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'history' | 'invoices'
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteCustomer(customerId);
+      setConfirmDelete(false);
+      onClose();
+    } catch (err) {
+      console.error('Failed to delete customer:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (!isOpen || !customerId) return null;
 
@@ -67,7 +87,7 @@ export const CustomerProfileModal = ({
       description="Individual pricing agreement, weekly schedule, and financial ledger."
       footer={
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {isActive && (
               <Button
                 variant="secondary"
@@ -88,12 +108,12 @@ export const CustomerProfileModal = ({
                 Reactivate Meals
               </Button>
             )}
-            {!isArchived && (
+            {!isArchived ? (
               <Button
                 variant="ghost"
                 size="sm"
                 iconLeft={Archive}
-                className="text-muted-text hover:text-status-error"
+                className="text-muted-text hover:text-charcoal"
                 onClick={() => {
                   if (confirm('Archive this customer?')) {
                     archiveCustomer(customer.id);
@@ -102,7 +122,27 @@ export const CustomerProfileModal = ({
               >
                 Archive
               </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                iconLeft={ArchiveRestore}
+                className="text-forest hover:bg-forest/10"
+                onClick={() => unarchiveCustomer(customer.id)}
+              >
+                Unarchive Customer
+              </Button>
             )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              iconLeft={Trash2}
+              className="text-status-error hover:bg-rose-50"
+              onClick={() => setConfirmDelete(true)}
+            >
+              Delete Customer
+            </Button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -314,6 +354,50 @@ export const CustomerProfileModal = ({
         </div>
 
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {confirmDelete && (
+        <Modal
+          isOpen={confirmDelete}
+          onClose={() => setConfirmDelete(false)}
+          title={`Delete Customer: ${customer.name}`}
+          description="Are you sure you want to permanently delete this customer account?"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => setConfirmDelete(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                iconLeft={Trash2}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Customer'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3 py-1">
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-card text-rose-900 text-xs flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Permanent Deletion Warning</p>
+                <p className="mt-0.5 text-rose-700">
+                  This will permanently delete <strong>{customer.name}</strong> along with all of their dispatch orders, statements, and payment records from the database. This action cannot be reversed.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </Modal>
   );
 };

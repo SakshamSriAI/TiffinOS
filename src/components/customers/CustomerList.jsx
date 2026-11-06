@@ -12,24 +12,51 @@ import {
   CheckCircle2,
   Calendar,
   IndianRupee,
-  MoreVertical
+  MoreVertical,
+  Archive,
+  ArchiveRestore,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '../common/Table';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Input } from '../common/Input';
 import { Select } from '../common/Select';
+import { Modal } from '../common/Modal';
 import { useApp } from '../../context/AppContext';
 import { useSecurity } from '../../context/SecurityContext';
 import { formatINR } from '../../utils/currency';
 
 export const CustomerList = ({ onViewProfile, onEditCustomer }) => {
-  const { customers, pauseCustomer, reactivateCustomer } = useApp();
+  const { 
+    customers, 
+    pauseCustomer, 
+    reactivateCustomer, 
+    archiveCustomer, 
+    unarchiveCustomer, 
+    deleteCustomer 
+  } = useApp();
   const { maskPhone } = useSecurity();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'paused' | 'archived'
   const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'regular' | 'occasional'
+  const [customerToDelete, setCustomerToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete) return;
+    try {
+      setIsDeleting(true);
+      await deleteCustomer(customerToDelete.id);
+      setCustomerToDelete(null);
+    } catch (err) {
+      console.error('Delete failed:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((cust) => {
@@ -258,6 +285,35 @@ export const CustomerList = ({ onViewProfile, onEditCustomer }) => {
                             <PlayCircle className="w-4 h-4" />
                           </button>
                         ) : null}
+
+                        {isArchived ? (
+                          <button
+                            type="button"
+                            onClick={() => unarchiveCustomer(cust.id)}
+                            className="p-1.5 text-forest hover:bg-forest/10 rounded transition-colors"
+                            title="Unarchive & restore to Active"
+                          >
+                            <ArchiveRestore className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => archiveCustomer(cust.id)}
+                            className="p-1.5 text-muted-text hover:text-charcoal hover:bg-surface-subtle rounded transition-colors"
+                            title="Archive customer"
+                          >
+                            <Archive className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setCustomerToDelete(cust)}
+                          className="p-1.5 text-muted-light hover:text-status-error hover:bg-rose-50 rounded transition-colors"
+                          title="Permanently Delete Customer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -278,6 +334,7 @@ export const CustomerList = ({ onViewProfile, onEditCustomer }) => {
           filteredCustomers.map((cust) => {
             const isActive = cust.status === 'active';
             const isPaused = cust.status === 'paused';
+            const isArchived = cust.status === 'archived';
 
             return (
               <div
@@ -327,21 +384,49 @@ export const CustomerList = ({ onViewProfile, onEditCustomer }) => {
                     {maskPhone(cust.phone)}
                   </span>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     <Button
-                      variant="secondary"
+                      variant="ghost"
                       size="sm"
                       onClick={() => onViewProfile(cust)}
                     >
-                      View Profile
+                      View
                     </Button>
                     <Button
-                      variant="primary"
+                      variant="secondary"
                       size="sm"
                       onClick={() => onEditCustomer(cust)}
                     >
                       Edit
                     </Button>
+                    {isArchived ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        iconLeft={ArchiveRestore}
+                        className="text-forest hover:bg-forest/10"
+                        onClick={() => unarchiveCustomer(cust.id)}
+                      >
+                        Unarchive
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconLeft={Archive}
+                        onClick={() => archiveCustomer(cust.id)}
+                      >
+                        Archive
+                      </Button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setCustomerToDelete(cust)}
+                      className="p-1.5 text-muted-light hover:text-status-error hover:bg-rose-50 rounded transition-colors"
+                      title="Delete customer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -349,6 +434,50 @@ export const CustomerList = ({ onViewProfile, onEditCustomer }) => {
           })
         )}
       </div>
+
+      {/* Delete Customer Confirmation Modal */}
+      {customerToDelete && (
+        <Modal
+          isOpen={Boolean(customerToDelete)}
+          onClose={() => setCustomerToDelete(null)}
+          title={`Delete Customer: ${customerToDelete.name}`}
+          description="Are you sure you want to permanently delete this customer account?"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => setCustomerToDelete(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                iconLeft={Trash2}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Customer'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3 py-1">
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-card text-rose-900 text-xs flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Permanent Deletion Warning</p>
+                <p className="mt-0.5 text-rose-700">
+                  This will permanently delete <strong>{customerToDelete.name}</strong> along with all of their dispatch orders, statements, and payment records from the system. This action cannot be reversed.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
 
     </div>
   );
