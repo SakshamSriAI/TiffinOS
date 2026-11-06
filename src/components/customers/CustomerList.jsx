@@ -20,10 +20,12 @@ import { Badge } from '../common/Badge';
 import { Input } from '../common/Input';
 import { Select } from '../common/Select';
 import { useApp } from '../../context/AppContext';
+import { useSecurity } from '../../context/SecurityContext';
 import { formatINR } from '../../utils/currency';
 
 export const CustomerList = ({ onViewProfile, onEditCustomer }) => {
   const { customers, pauseCustomer, reactivateCustomer } = useApp();
+  const { maskPhone } = useSecurity();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'paused' | 'archived'
@@ -176,7 +178,7 @@ export const CustomerList = ({ onViewProfile, onEditCustomer }) => {
 
                     {/* Phone */}
                     <TableCell className="text-xs font-mono text-charcoal">
-                      {cust.phone}
+                      {maskPhone(cust.phone)}
                     </TableCell>
 
                     {/* Type */}
@@ -322,7 +324,7 @@ export const CustomerList = ({ onViewProfile, onEditCustomer }) => {
 
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <span className="text-xs font-mono text-muted-text">
-                    {cust.phone}
+                    {maskPhone(cust.phone)}
                   </span>
 
                   <div className="flex items-center gap-2">

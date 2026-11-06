@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
+import { SecurityProvider } from './context/SecurityContext';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import DesignSystemPreview from './pages/DesignSystemPreview';
@@ -15,8 +16,9 @@ import Settings from './pages/Settings';
 
 export function App() {
   return (
-    <AppProvider>
-      <BrowserRouter>
+    <SecurityProvider>
+      <AppProvider>
+        <BrowserRouter>
         <Routes>
           {/* Public Marketing Route */}
           <Route path="/" element={<LandingPage />} />
@@ -44,6 +46,7 @@ export function App() {
         </Routes>
       </BrowserRouter>
     </AppProvider>
+  </SecurityProvider>
   );
 }
 

@@ -4,12 +4,14 @@ import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '.
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { formatINR } from '../../utils/currency';
+import { useSecurity } from '../../context/SecurityContext';
 
 export const InvoiceTable = ({
   invoices = [],
   onViewInvoice,
   onRecordPayment,
 }) => {
+  const { maskPhone } = useSecurity();
   return (
     <div className="space-y-4">
       
@@ -57,7 +59,7 @@ export const InvoiceTable = ({
                     {/* Customer */}
                     <TableCell>
                       <span className="font-semibold text-charcoal block">{inv.customerName}</span>
-                      <span className="text-[11px] text-muted-text font-mono">{inv.customerPhone}</span>
+                      <span className="text-[11px] text-muted-text font-mono">{maskPhone(inv.customerPhone)}</span>
                     </TableCell>
 
                     {/* Period */}

@@ -12,6 +12,7 @@ import {
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { formatINR } from '../../utils/currency';
+import { useSecurity } from '../../context/SecurityContext';
 
 export const DispatchOrderCard = ({
   order,
@@ -19,6 +20,7 @@ export const DispatchOrderCard = ({
   onCancel,
   onViewCustomer,
 }) => {
+  const { maskPhone } = useSecurity();
   const isDispatched = order.status === 'dispatched';
   const isCancelled = order.status === 'cancelled';
   const isPending = order.status === 'pending';
@@ -70,7 +72,7 @@ export const DispatchOrderCard = ({
                 className="flex items-center gap-1 text-muted-text hover:text-forest"
               >
                 <Phone className="w-3 h-3 text-muted-light" />
-                <span className="font-mono">{order.phone}</span>
+                <span className="font-mono">{maskPhone(order.phone)}</span>
               </a>
 
               <a

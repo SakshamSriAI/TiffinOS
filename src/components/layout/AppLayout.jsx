@@ -13,9 +13,14 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldCheck,
-  Calendar
+  Calendar,
+  Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { formatDateIST } from '../../utils/date';
+import { useSecurity } from '../../context/SecurityContext';
+import { LockScreen } from '../security/LockScreen';
 
 const NAV_ITEMS = [
   { name: 'Dashboard', path: '/app/dashboard', icon: LayoutDashboard },
@@ -28,8 +33,13 @@ const NAV_ITEMS = [
 ];
 
 export const AppLayout = () => {
+  const { isLocked, lock, isPrivacyMode, togglePrivacyMode } = useSecurity();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+
+  if (isLocked) {
+    return <LockScreen />;
+  }
 
   const currentNav = NAV_ITEMS.find((item) => location.pathname.startsWith(item.path)) || NAV_ITEMS[0];
   const todayFormatted = formatDateIST(new Date(), 'full');
@@ -128,7 +138,25 @@ export const AppLayout = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={togglePrivacyMode}
+            title={isPrivacyMode ? 'Disable Privacy Mask' : 'Enable Privacy Mask'}
+            className={`p-2 rounded-button text-xs transition-colors ${
+              isPrivacyMode ? 'bg-mint text-forest font-bold' : 'bg-white/10 text-white hover:bg-white/20'
+            }`}
+          >
+            {isPrivacyMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={lock}
+            title="Lock TiffinOS"
+            className="p-2 rounded-button bg-white/10 text-white hover:bg-red-500 transition-colors"
+          >
+            <Lock className="w-4 h-4" />
+          </button>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 rounded-button bg-white/10 text-white hover:bg-white/20 transition-colors"
@@ -203,7 +231,33 @@ export const AppLayout = () => {
             <span className="font-semibold text-charcoal">{currentNav.name}</span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Privacy Mode Toggle */}
+            <button
+              type="button"
+              onClick={togglePrivacyMode}
+              title={isPrivacyMode ? 'Disable Privacy Mask' : 'Enable Privacy Mask (Hides customer phones & revenue)'}
+              className={`px-2.5 py-1.5 rounded-button border text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                isPrivacyMode
+                  ? 'bg-forest text-white border-forest shadow-xs'
+                  : 'bg-surface-subtle text-muted-text border-border hover:text-charcoal hover:bg-white'
+              }`}
+            >
+              {isPrivacyMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span className="hidden lg:inline">{isPrivacyMode ? 'Privacy On' : 'Privacy Mode'}</span>
+            </button>
+
+            {/* Quick Lock Button */}
+            <button
+              type="button"
+              onClick={lock}
+              title="Lock TiffinOS (Requires Passcode to unlock)"
+              className="px-2.5 py-1.5 rounded-button bg-surface-subtle border border-border text-muted-text hover:text-status-error hover:border-status-error/30 hover:bg-red-50 transition-colors flex items-center gap-1.5"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline text-xs font-medium">Lock</span>
+            </button>
+
             <div className="flex items-center gap-2 text-xs font-medium text-muted-text bg-surface-subtle border border-border px-3 py-1.5 rounded-button">
               <Calendar className="w-3.5 h-3.5 text-forest" />
               <span>{todayFormatted}</span>
