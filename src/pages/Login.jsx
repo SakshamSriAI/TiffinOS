@@ -9,7 +9,9 @@ import {
   MessageCircle, 
   Phone, 
   Utensils, 
-  Sparkles 
+  Sparkles,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -19,17 +21,19 @@ import { useSecurity } from '../context/SecurityContext';
 export const Login = () => {
   const { unlock } = useSecurity();
   const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (!pin.trim()) {
+    const cleanPin = pin.trim();
+    if (!cleanPin) {
       setErrorMessage('Please enter your Master Passcode.');
       return;
     }
 
-    const success = unlock(pin.trim());
+    const success = unlock(cleanPin);
     if (success) {
       setErrorMessage('');
       navigate('/app/dashboard');
@@ -66,19 +70,31 @@ export const Login = () => {
         <Card className="shadow-card border-border">
           <CardContent className="p-6">
             <form onSubmit={handleLogin} className="space-y-4">
-              <Input
-                label="Master Passcode (PIN)"
-                type="password"
-                placeholder="Enter 4-digit Master Passcode"
-                value={pin}
-                onChange={(e) => {
-                  setPin(e.target.value);
-                  setErrorMessage('');
-                }}
-                iconLeft={KeyRound}
-                required={true}
-                autoFocus
-              />
+              <div className="relative">
+                <Input
+                  label="Master Passcode (PIN)"
+                  type={showPin ? "text" : "password"}
+                  placeholder="Enter Master Passcode (4-6 digits)"
+                  value={pin}
+                  maxLength={6}
+                  onChange={(e) => {
+                    setPin(e.target.value);
+                    setErrorMessage('');
+                  }}
+                  iconLeft={KeyRound}
+                  required={true}
+                  autoFocus
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPin(!showPin)}
+                  className="absolute right-3 top-8 text-muted-text hover:text-charcoal transition-colors p-1"
+                  title={showPin ? "Hide passcode" : "Show passcode"}
+                >
+                  {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
 
               {errorMessage && (
                 <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-button text-xs text-status-error flex items-center gap-2 animate-in fade-in">

@@ -267,6 +267,18 @@ export const AppProvider = ({ children }) => {
   const updateSettings = async (newSettings) => {
     if (liveMode && supabase) {
       try {
+        // Fetch existing operating_days to preserve master_passcode
+        const { data: currentRec } = await supabase
+          .from('business_settings')
+          .select('operating_days')
+          .limit(1)
+          .single();
+
+        const currentPasscode = currentRec?.operating_days?.master_passcode || localStorage.getItem('tiffinos_master_passcode') || '1234';
+        const mergedOperatingDays = newSettings.operatingDays
+          ? { ...newSettings.operatingDays, master_passcode: currentPasscode }
+          : currentRec?.operating_days;
+
         await supabase
           .from('business_settings')
           .update({
@@ -280,7 +292,7 @@ export const AppProvider = ({ children }) => {
             default_dinner_price: newSettings.defaultDinnerPrice,
             lunch_cutoff: newSettings.lunchCutoff,
             dinner_cutoff: newSettings.dinnerCutoff,
-            operating_days: newSettings.operatingDays,
+            operating_days: mergedOperatingDays,
           })
           .neq('id', '00000000-0000-0000-0000-000000000000');
       } catch (e) {

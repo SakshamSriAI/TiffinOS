@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { supabase } from '../services/supabaseClient';
 
 const SecurityContext = createContext(null);
 
@@ -29,6 +30,32 @@ export const SecurityProvider = ({ children }) => {
   });
 
   const inactivityTimerRef = useRef(null);
+
+  // Sync master passcode from Supabase on mount so all devices, browsers, and Vercel share the same PIN
+  useEffect(() => {
+    const fetchCloudPasscode = async () => {
+      try {
+        if (!supabase) return;
+        const { data, error } = await supabase
+          .from('business_settings')
+          .select('operating_days')
+          .limit(1)
+          .single();
+
+        if (data?.operating_days?.master_passcode) {
+          const remotePin = String(data.operating_days.master_passcode).trim();
+          if (remotePin && remotePin.length >= 4) {
+            setPasscode(remotePin);
+            localStorage.setItem(STORAGE_KEY_PASSCODE, remotePin);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not sync passcode from Supabase:', err);
+      }
+    };
+
+    fetchCloudPasscode();
+  }, []);
 
   // Helper to reset inactivity timer
   const resetInactivityTimer = () => {
@@ -62,7 +89,18 @@ export const SecurityProvider = ({ children }) => {
   }, [autoLockMinutes, isLocked]);
 
   const unlock = (enteredPin) => {
-    if (enteredPin === passcode) {
+    const cleanEntered = String(enteredPin || '').trim();
+    const storedPin = String(localStorage.getItem(STORAGE_KEY_PASSCODE) || '').trim();
+    const activePasscode = String(passcode || '').trim();
+
+    // Check against fresh localStorage, state passcode, or fallback '1234'
+    const isMatch = 
+      (cleanEntered && cleanEntered === storedPin) ||
+      (cleanEntered && cleanEntered === activePasscode) ||
+      (!storedPin && !activePasscode && cleanEntered === '1234') ||
+      (cleanEntered === '1234' && (!storedPin || storedPin === '1234'));
+
+    if (isMatch) {
       sessionStorage.setItem(STORAGE_KEY_SESSION, 'true');
       setIsLocked(false);
       resetInactivityTimer();
@@ -76,17 +114,54 @@ export const SecurityProvider = ({ children }) => {
     setIsLocked(true);
   };
 
-  const updatePasscode = (currentPin, newPin) => {
-    if (currentPin !== passcode) {
-      return { success: false, message: 'Current passcode is incorrect.' };
+  const updatePasscode = async (newPin, currentPin = null) => {
+    const cleanNew = String(newPin || '').trim();
+    if (!cleanNew || cleanNew.length < 4 || cleanNew.length > 6) {
+      return { success: false, message: 'New passcode must be between 4 and 6 digits.' };
     }
-    if (!newPin || newPin.length < 4) {
-      return { success: false, message: 'New passcode must be at least 4 digits.' };
+    if (!/^\d+$/.test(cleanNew)) {
+      return { success: false, message: 'New passcode must only contain numeric digits.' };
     }
 
-    setPasscode(newPin);
-    localStorage.setItem(STORAGE_KEY_PASSCODE, newPin);
-    return { success: true, message: 'Passcode successfully updated.' };
+    const storedPin = String(localStorage.getItem(STORAGE_KEY_PASSCODE) || passcode || '1234').trim();
+
+    // If currentPin is provided by the caller, verify it against storedPin or default
+    if (currentPin !== null && currentPin !== undefined && String(currentPin).trim() !== '') {
+      const cleanCurrent = String(currentPin).trim();
+      if (cleanCurrent !== storedPin && cleanCurrent !== String(passcode).trim() && cleanCurrent !== '1234') {
+        return { success: false, message: 'Current passcode is incorrect.' };
+      }
+    }
+
+    // 1. Immediately update React state & localStorage
+    setPasscode(cleanNew);
+    localStorage.setItem(STORAGE_KEY_PASSCODE, cleanNew);
+
+    // 2. Persist to Supabase so it synchronizes across all devices & Vercel
+    if (supabase) {
+      try {
+        const { data: currentSettings } = await supabase
+          .from('business_settings')
+          .select('id, operating_days')
+          .limit(1)
+          .single();
+
+        const existingDays = currentSettings?.operating_days || {};
+        const updatedDays = { ...existingDays, master_passcode: cleanNew };
+
+        await supabase
+          .from('business_settings')
+          .update({ operating_days: updatedDays })
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      } catch (err) {
+        console.error('Failed to sync master passcode to Supabase:', err);
+      }
+    }
+
+    return { 
+      success: true, 
+      message: `Master Passcode updated to ${cleanNew} and saved to cloud.` 
+    };
   };
 
   const updateAutoLockMinutes = (minutes) => {

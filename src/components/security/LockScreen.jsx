@@ -4,11 +4,13 @@ import { Lock, Unlock, Shield, AlertCircle, Delete, Eye, EyeOff } from 'lucide-r
 import { useSecurity } from '../../context/SecurityContext';
 
 export const LockScreen = () => {
-  const { unlock } = useSecurity();
+  const { unlock, passcode } = useSecurity();
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showPin, setShowPin] = useState(false);
+
+  const targetLength = Math.max(4, String(passcode || '1234').length);
 
   // Handle keyboard typing
   useEffect(() => {
@@ -30,12 +32,18 @@ export const LockScreen = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pin]);
 
-  // Auto-attempt unlock when 4 digits are entered
+  // Auto-attempt unlock when typed pin matches passcode or reaches target length
   useEffect(() => {
-    if (pin.length >= 4) {
-      handleUnlockAttempt(pin);
+    if (!pin) return;
+    const cleanEntered = pin.trim();
+    const storedPasscode = String(passcode || localStorage.getItem('tiffinos_master_passcode') || '1234').trim();
+
+    if (cleanEntered === storedPasscode) {
+      handleUnlockAttempt(cleanEntered);
+    } else if (cleanEntered.length >= targetLength) {
+      handleUnlockAttempt(cleanEntered);
     }
-  }, [pin]);
+  }, [pin, passcode, targetLength]);
 
   const handleUnlockAttempt = (enteredPin) => {
     const success = unlock(enteredPin);
@@ -82,21 +90,33 @@ export const LockScreen = () => {
           <p className="text-xs text-mint/80 mt-1">Enter your Master Passcode to access records</p>
         </div>
 
-        {/* PIN Dot Indicators */}
-        <div className={`flex items-center gap-3 py-3 ${error ? 'animate-bounce' : ''}`}>
-          {[0, 1, 2, 3].map((index) => {
-            const isFilled = pin.length > index;
-            return (
-              <div
-                key={index}
-                className={`w-4 h-4 rounded-full transition-all duration-150 ${
-                  isFilled
-                    ? 'bg-mint scale-110 shadow-sm'
-                    : 'bg-white/20 border border-white/30'
-                }`}
-              />
-            );
-          })}
+        {/* PIN Dot Indicators & Show Digits option */}
+        <div className="flex flex-col items-center gap-2">
+          <div className={`flex items-center gap-3 py-2 ${error ? 'animate-bounce' : ''}`}>
+            {Array.from({ length: targetLength }).map((_, index) => {
+              const isFilled = pin.length > index;
+              return (
+                <div
+                  key={index}
+                  className={`w-4 h-4 rounded-full transition-all duration-150 ${
+                    isFilled
+                      ? 'bg-mint scale-110 shadow-sm'
+                      : 'bg-white/20 border border-white/30'
+                  }`}
+                />
+              );
+            })}
+          </div>
+
+          {/* Reveal entered numbers toggle */}
+          <button
+            type="button"
+            onClick={() => setShowPin(!showPin)}
+            className="text-[11px] text-mint/80 hover:text-white inline-flex items-center gap-1 transition-colors mt-1"
+          >
+            {showPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            <span>{showPin ? (pin || 'Empty') : 'View Digits'}</span>
+          </button>
         </div>
 
         {/* Error message */}
@@ -146,6 +166,18 @@ export const LockScreen = () => {
             <Delete className="w-5 h-5 text-gray-300" />
           </button>
         </div>
+
+        {/* Manual Unlock Submit button if auto-attempt hasn't fired */}
+        {pin.length >= 4 && (
+          <button
+            type="button"
+            onClick={() => handleUnlockAttempt(pin)}
+            className="w-64 py-2.5 px-4 rounded-xl bg-mint hover:bg-mint/90 active:scale-95 text-forest font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 animate-in fade-in"
+          >
+            <Unlock className="w-4 h-4" />
+            <span>Unlock Dashboard</span>
+          </button>
+        )}
 
         {/* Public Website Link and Security Notice */}
         <div className="pt-3 text-center space-y-2">
